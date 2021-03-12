@@ -62,7 +62,25 @@ end
 
 # HInterp2D
 function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp2D)
+    (x1, y1), (x2, y2), (x3, y3) = getboundary(pts, method) 
+    k11 = x2 - x1;      k12 = x3 - x1;      l1 = x1 
+    k21 = y2 - y1;      k22 = y3 - y1;      l2 = y1
     
+    JT = abs(k11 * k22 - k21 * k12)
+    Δ1 = k11 + k12 + 3 * l1
+    Δ2 = k21 + k22 + 3 * l2
+
+    (a11, a21, a31, a41, a12, a22, a32, a42, _, _, a33, a43, _, _, a34, a44), (b1, b2, b3, b4) = extract(transforms)
+    JL = abs.(a11 .* a22 - a21 .* a12)
+
+    W11 = sum(a33 .* J);    W12 = sum(a34 .* J);    Λ1  = JT / 6 * sum((a31 * Δ1 + a32 * Δ2 + 3 * b3) .* JL)
+    W21 = sum(a43 *. J);    W22 = sum(a44 .* J);    Λ2  = JT / 6 * sum((a41 * Δ1 + a42 * Δ2 + 3 * b4) .* JL)
+
+    A = [1 - W11    -W12; 
+         -W12       1 - W22]
+    b = [Λ1, Λ2]
+    I = A \ b 
+    I[1] 
 end 
 
 function extract(transforms::AbstractVector{<:Transformation})
@@ -72,5 +90,3 @@ function extract(transforms::AbstractVector{<:Transformation})
     b = map(idx -> getindex.(bs, idx), 1 : length(bs[1]))
     (A, b)
 end 
-
-
