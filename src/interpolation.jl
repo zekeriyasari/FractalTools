@@ -1,13 +1,13 @@
 # This includes interpolation methods 
 
-export Interp1D, Interp2D, HInterp1D, HInterp2D, interpolate
+export Interp1D, Interp2D, HInterp1D, HInterp2D, interpolate, project
 
 const PointVector{Dim} = AbstractVector{<:AbstractPoint{Dim, T}} where {T}
 const Tessellation = Union{<:LineString, <:PyObject}
 
 abstract type AbstractInterp end
 abstract type AbstractCurveInterp   <: AbstractInterp end
-abstract type AbstractSurfaceInterp <: AbstractInterp  end
+abstract type AbstractSurfaceInterp <: AbstractInterp end
 
 struct Interp1D{T<:Union{<:Real, <:AbstractVector{<:Real}}} <: AbstractCurveInterp
     freevars::T 
@@ -170,7 +170,7 @@ function _getmapping(transform, method::Interp1D)
 end 
 
 function _getmapping(transform, method::HInterp1D)
-    (a11, a21, a31, _, a22, a32, _, a32, a33), (b1, b2, b3) = transform.A, transform.b
+    (a11, a21, a31, _, a22, a32, _, a23, a33), (b1, b2, b3) = transform.A, transform.b
     linv = x -> (x - b1) / a11 
     F = (x, y, z) ->  [a21 a22 a23; a31 a32 a33] * [x, y, z] + [b2, b3]
     (linv, F)
@@ -203,6 +203,6 @@ function wrapper((f, tess, mappings))
         n == 0 && error("Point $pnt cannot be found.")
         linv, F = mappings[n]
         val = linv(x...) 
-        F(val..., f(val...))
+        F(val..., f(val...)...)
     end, tess, mappings
 end

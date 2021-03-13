@@ -31,8 +31,8 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp1
     K1  = (x[end]^2 - x[1]^2) / 2 
     K2  = (x[end] - x[1]) / 2
 
-    W11 = sum(a22 .* J);    W12 = sum(a23 .* J);    Λ1  = sum((a21 * K1 + b2 * K2) .* J)
-    W21 = sum(a32 *. J);    W22 = sum(a33 .* J);    Λ2  = sum((a31 * K1 + b3 * K2) .* J) 
+    W11 = sum(a22 .* J);    W12 = sum(a23 .* J);    Λ1  = sum((a21 * K1 + b2 * K2) .* J);
+    W21 = sum(a32 .* J);    W22 = sum(a33 .* J);    Λ2  = sum((a31 * K1 + b3 * K2) .* J);
 
     A = [1 - W11    -W12; 
          -W12       1 - W22]
@@ -73,8 +73,8 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp2
     (a11, a21, a31, a41, a12, a22, a32, a42, _, _, a33, a43, _, _, a34, a44), (b1, b2, b3, b4) = extract(transforms)
     JL = abs.(a11 .* a22 - a21 .* a12)
 
-    W11 = sum(a33 .* J);    W12 = sum(a34 .* J);    Λ1  = JT / 6 * sum((a31 * Δ1 + a32 * Δ2 + 3 * b3) .* JL)
-    W21 = sum(a43 *. J);    W22 = sum(a44 .* J);    Λ2  = JT / 6 * sum((a41 * Δ1 + a42 * Δ2 + 3 * b4) .* JL)
+    W11 = sum(a33 .* J);    W12 = sum(a34 .* J);    Λ1  = JT / 6 * sum((a31 * Δ1 + a32 * Δ2 + 3 * b3) .* JL);
+    W21 = sum(a43 .* J);    W22 = sum(a44 .* J);    Λ2  = JT / 6 * sum((a41 * Δ1 + a42 * Δ2 + 3 * b4) .* JL);
 
     A = [1 - W11    -W12; 
          -W12       1 - W22]
