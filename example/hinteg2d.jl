@@ -15,4 +15,4 @@ ngon = Triangle(
     Point(BigFloat(0.5), BigFloat(1.)))
 npts = 100
 pts = getdata(f, ngon, npts)
-interp = integrate(pts, Interp2D(0.001))
+interp = integrate(pts, HInterp2D(0.001 * ones(2,2)))
