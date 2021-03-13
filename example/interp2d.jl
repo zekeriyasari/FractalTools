@@ -22,11 +22,6 @@ end
 
 tpts = getdata(ngon, npts)
 
-fvals = map(pnt -> Point(f(pnt...)...), tpts)
-ivals = map(pnt -> Point(interp(pnt...)...), tpts)
-
-
 fig, ax, plt = trisurf(tpts, f, meshcolor3=:red)
 trisurf!(ax, tpts, interp, meshcolor3=:blue)
-trisurf(tpts, evals, meshcolor3=last.(evals), colormap=:viridis)
 fig, ax, plt = trisurf(tpts, err, meshcolor3=:red)

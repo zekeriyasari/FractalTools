@@ -73,8 +73,8 @@ end
 
 
 getboundary(pts::PointVector, ::AbstractCurveInterp) = Line(pts[1], pts[end])
-function getboundary(pts::PointVector, ::AbstractSurfaceInterp) 
-    hull = spt.ConvexHull(collect(hcat(collect.(project(pts))...)') )
+function getboundary(pts::PointVector, method::AbstractSurfaceInterp) 
+    hull = spt.ConvexHull(collect(hcat(collect.(project(pts, method))...)') )
     if length(hull.vertices) == 3
         # If the convex hull is a triangle, just return the triangle 
         Triangle(Point.(pts[hull.vertices .+ 1])...)
@@ -148,7 +148,7 @@ end
 function _gettransform(outtrig::Triangle, intrig::Triangle, freevar::AbstractMatrix) 
     outmat = collect(hcat(coordinates(outtrig)...)')
     inmat = collect(hcat(coordinates(intrig)...)')
-    inmat[:, 3:4] -= outmat[:, 3:4] .* freevar'
+    inmat[:, 3:4] -= outmat[:, 3:4] * freevar'
     outmat = [outmat[:, 1:2] ones(3)]
     a11, a12, b1, a21, a22, b2, a31, a32, b3, a41, a42, b4 = outmat \ inmat
     A = [a11    a12    0                0; 

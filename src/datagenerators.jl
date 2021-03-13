@@ -13,7 +13,7 @@ zi)` where `xi` and `yi` are from the dispersed points and `zi = f(xi, yi)`.
 Returns intepolation data that is insideo of `ngon`. `npts` is the number of points to be returned.  
 """
 function getdata end 
-getdata(f, ngon::Ngon, npts::Int) = [Point(pnt..., f(pnt...)) for pnt in disperse(ngon, npts)] 
+getdata(f, ngon::Ngon, npts::Int) = [Point(pnt..., f(pnt...)...) for pnt in disperse(ngon, npts)] 
 getdata(ngon::Ngon, npts::Int) = disperse(ngon, npts)
 
 
