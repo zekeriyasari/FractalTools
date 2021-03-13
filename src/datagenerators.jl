@@ -15,7 +15,7 @@ Returns intepolation data that is insideo of `ngon`. `npts` is the number of poi
 function getdata end 
 getdata(f, ngon::Ngon, npts::Int) = [Point(pnt..., f(pnt...)...) for pnt in disperse(ngon, npts)] 
 getdata(ngon::Ngon, npts::Int) = disperse(ngon, npts)
-
+#TODO: Test `getdata` function with `Line` domains.
 
 """
     getpoint(ngon::Ngon, maxiter::Int=100_000) 
