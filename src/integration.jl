@@ -2,6 +2,17 @@
 
 export integrate 
 
+"""
+    $SIGNATURES
+
+Calculates numerical integration of `pts` using the fractal integration method `method` that may be 
+
+* [`Interp1D`](@ref) 
+* [`HInterp1D`](@ref) 
+* [`Interp2D`](@ref) 
+* [`HInterp2D`](@ref) 
+
+"""
 integrate(pts::AbstractVector{<:AbstractVector{<:Real}}, method::AbstractInterp) = 
     integrate(map(pnt -> Point(pnt...), pts), method)
 
@@ -41,7 +52,7 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp1
          -W21       1 - W22]
     b = [Λ1, Λ2]
     I = A \ b 
-    I[1] 
+    I[1]    # Hidden integration value I[2] is not returned. 
 end 
 
 # Interp2D
@@ -83,7 +94,7 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp2
          -W12       1 - W22]
     b = [Λ1, Λ2]
     I = A \ b 
-    I[1] 
+    I[1]    # Hidden integration value I[2] is not returned. 
 end 
 
 function extract(transforms::AbstractVector{<:Transformation})
