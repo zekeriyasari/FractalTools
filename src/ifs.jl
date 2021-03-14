@@ -56,7 +56,8 @@ end
 IFS(ws) = (n = length(ws); IFS(ws, 1  / n * ones(n))) 
 
 """ 
-    Sierpinski() 
+    $SIGNATURES
+
 Conctructs an IFS for Sierpinski triangle.
 """
 Sierpinski() = IFS([
@@ -66,7 +67,8 @@ Sierpinski() = IFS([
     ], [0.33, 0.33, 0.34])
 
 """
-    Square()
+    $SIGNATURES
+
 Constructs and IFS for a sqaure.
 """
 Square() = IFS([
@@ -77,7 +79,8 @@ Square() = IFS([
     ], [0.25, 0.25, 0.25, 0.25])
 
 """
-    Fern()
+    $SIGNATURES
+
 Constructs and IFS for a fern.
 """
 Fern() = IFS([
@@ -88,7 +91,8 @@ Fern() = IFS([
     ], [0.01, 0.85, 0.07, 0.07])
 
 """
-    Tree()
+    $SIGNATURES
+
 Constructs and IFS for a fractal tree.
 """
 Tree() = IFS([
@@ -99,14 +103,14 @@ Tree() = IFS([
     ], [0.05, 0.40, 0.40, 0.15])
 
 """
-    dimension(ifs::IFS)
+    $SIGNATURES
 
 Returns dimension of `ifs`.
 """
 dimension(ifs::IFS) = dimension(ifs.ws[1])
 
 """
-    contfactor(ifs::IFS)
+    $SIGNATURES
 
 Returns the contraction factor of `IFS`.
 """
