@@ -1,7 +1,8 @@
-# This file investigates MSE with respect to free variables 
+# This file investigates integration error with respect to free variables 
 
 using FractalTools 
 using GeometryBasics
+using Makie 
 
 # Construct interpolation data 
 f(x, y) = x^2 + y^2 + 1
