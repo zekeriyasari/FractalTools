@@ -15,11 +15,11 @@ abstract type AbstractSurfaceInterp <: AbstractInterp end       # Two dimensiona
 One dimensional fractal interpolation. IFS is defined as
 ```math 
     w_n(x, y) = \\begin{bmatrix} 
-        a_{11, n} & 0 \\\
+        a_{11, n} & 0 \\
         a_{21, n} & a_{22, n} 
     \\end{bmatrix} 
     \\begin{bmatrix} 
-        b_{1, n} \\\
+        b_{1, n} \\
         b_{2, n}
     \\end{bmatrix} \\quad n = 1, 2, \\ldots, N 
 ```
@@ -42,14 +42,14 @@ end
 Two dimensional fractal interpolation. IFS is defined as
 ```math 
     w_n(x, y) = \\begin{bmatrix} 
-        a_{11, n}   & a_{12, n}     & 0         \\\ 
-        a_{21, n}   & a_{22, n}     & 0         \\\ 
-        a_{31, n}   & a_{32, n}     & a_{33, n} \\\  
+        a_{11, n}   & a_{12, n}     & 0         \\
+        a_{21, n}   & a_{22, n}     & 0         \\ 
+        a_{31, n}   & a_{32, n}     & a_{33, n} \\  
     \\end{bmatrix} 
     \\begin{bmatrix} 
-        b_{1, n} \\\ 
-        b_{2, n} \\\ 
-        b_{3, n} \\\ 
+        b_{1, n} \\
+        b_{2, n} \\ 
+        b_{3, n} \\ 
     \\end{bmatrix} \\quad n = 1, 2, \\ldots, N 
 ```
 Here ``a_{33,n}, n = 1, 2, \\ldots, N` are the free variables. While constructing an `InterpdD`, the free variables can be 
@@ -72,20 +72,20 @@ end
 One dimensional hidden fractal interpolation. IFS is defined as
 ```math 
     w_n(x, y) = \\begin{bmatrix} 
-        a_{11, n}   & 0             & 0         \\\
-        a_{21, n}   & a_{22, n}     & a_{23, n} \\\
-        a_{31, n}   & a_{32, n}     & a_{33, n} \\\ 
+        a_{11, n}   & 0             & 0         \\
+        a_{21, n}   & a_{22, n}     & a_{23, n} \\
+        a_{31, n}   & a_{32, n}     & a_{33, n} \\ 
     \\end{bmatrix} 
     \\begin{bmatrix} 
-        b_{1, n} \\\ 
-        b_{2, n} \\\ 
-        b_{3, n} \\\ 
+        b_{1, n} \\ 
+        b_{2, n} \\ 
+        b_{3, n} \\ 
     \\end{bmatrix} \\quad n = 1, 2, \\ldots, N 
 ```
 Here 
 ```math 
     \\begin{bmatrix}
-        a_{22, n} & a_{23, n} \\\ 
+        a_{22, n} & a_{23, n} \\ 
         a_{32, n} & a_{33, n}  
     \\end{bmatrix} 
 ```
@@ -93,11 +93,11 @@ are the free variables. While constructing an `HInterp1D`, the free variables ca
 or a vector of real matrices. If a single real matrix is specified, it assumed that 
 ```math 
     \\begin{bmatrix}
-        a_{22} & a_{23} \\\ 
+        a_{22} & a_{23} \\ 
         a_{32} & a_{33}  
     \\end{bmatrix} 
     \\begin{bmatrix}
-        a_{22, n} & a_{23, n} \\\ 
+        a_{22, n} & a_{23, n} \\
         a_{32, n} & a_{33, n}  
     \\end{bmatrix} 
     \\quad \\forall n = 1, 2, \\ldots, N
@@ -119,22 +119,22 @@ end
 Two dimensional hidden fractal interpolation. IFS is defined as
 ```math 
     w_n(x, y) = \\begin{bmatrix} 
-        a_{11, n}   & 0             & 0             & 0         \\\
-        a_{21, n}   & a_{22, n}     & 0             & 0         \\\ 
-        a_{31, n}   & a_{32, n}     & a_{33, n}     & a_{34, n} \\\ 
-        a_{41, n}   & a_{42, n}     & a_{43, n}     & a_{44, n} \\\ 
+        a_{11, n}   & 0             & 0             & 0         \\
+        a_{21, n}   & a_{22, n}     & 0             & 0         \\ 
+        a_{31, n}   & a_{32, n}     & a_{33, n}     & a_{34, n} \\ 
+        a_{41, n}   & a_{42, n}     & a_{43, n}     & a_{44, n} \\ 
     \\end{bmatrix} 
     \\begin{bmatrix} 
-        b_{1, n} \\\ 
-        b_{2, n} \\\ 
-        b_{3, n} \\\ 
-        b_{4, n} \\\ 
+        b_{1, n} \\ 
+        b_{2, n} \\
+        b_{3, n} \\ 
+        b_{4, n} \\ 
     \\end{bmatrix} \\quad n = 1, 2, \\ldots, N 
 ```
 Here 
 ```math 
     \\begin{bmatrix}
-        a_{33, n} & a_{34, n} \\\ 
+        a_{33, n} & a_{34, n} \\ 
         a_{43, n} & a_{44, n}  
     \\end{bmatrix} 
 ```
@@ -142,11 +142,11 @@ are the free variables. While constructing an `HInterp2D`, the free variables ca
 or a vector of real matrices. If a single real matrix is specified, it assumed that 
 ```math 
     \\begin{bmatrix}
-        a_{33} & a_{34} \\\ 
+        a_{33} & a_{34} \\ 
         a_{43} & a_{44}  
     \\end{bmatrix} 
     \\begin{bmatrix}
-        a_{33, n} & a_{34, n} \\\ 
+        a_{33, n} & a_{34, n} \\ 
         a_{43, n} & a_{44, n}  
     \\end{bmatrix} 
     \\quad \\forall n = 1, 2, \\ldots, N
