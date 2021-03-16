@@ -22,8 +22,8 @@ end
 
 # Plot mse 
 fig = Figure() 
-ax = fig[1, 1] = Axis(fig, xlabel="Free Variable", ylabel="Integration Error", title="1D Integration Error") 
+ax = fig[1, 1] = Axis(fig, xlabel="Free Variable", ylabel="Integration Error", title="1D Hidden Integration Error") 
 stem!(ax, freevars, mse, color=:black)
-save(joinpath(@__DIR__, "integ1d_mse.png"), fig)
+save(joinpath(@__DIR__, "integ1d_error.png"), fig)
 display(fig)
 
