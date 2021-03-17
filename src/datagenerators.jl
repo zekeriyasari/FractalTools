@@ -3,19 +3,25 @@
 export getdata, getpoint
 
 """
-    getdata(f, ngon::Ngon, npts::Int) 
+    getdata(f, vtx, npts) 
 
-Returns interpolation data `pnts`. `pnts` is a vector of three-dimensional points `pi = Point(xi, yi,
-zi)` where `xi` and `yi` are from the dispersed points and `zi = f(xi, yi)`. 
+Returns a vector of (d + m)-dimensional points that are dispersed randomly over d-dimensioanl domain with vertex points
+`vtx`. `f` is the vector-valued function used to map each point in the domain. `npts` is the number of points to returned.
 
-    getdata(ngon::Ngon, npts::Int)
+    getdata(vtx, npts) 
 
-Returns intepolation data that is insideo of `ngon`. `npts` is the number of points to be returned.  
+Returns a vector of d-dimensional points that are dispersed randomly over d-dimensioanl domain with vertex points
+`vtx`. `npts` is the number of points to be returned` 
 """
-function getdata end 
-getdata(f, ngon::Ngon, npts::Int) = [Point(pnt..., f(pnt...)...) for pnt in disperse(ngon, npts)] 
-getdata(ngon::Ngon, npts::Int) = disperse(ngon, npts)
-#TODO: Test `getdata` function with `Line` domains.
+getdata(f, vtx::AbstractVector{<:AbstractVector}, npts::Int) = getdata(f, ngon(vtx), npts)
+getdata(vtx::AbstractVector{<:AbstractVector}, npts::Int)    = getdata(ngon(vtx), npts)
+getdata(f, domain::Ngon, npts::Int) = [Point(pnt..., f(pnt...)...) for pnt in disperse(domain, npts)] 
+getdata(domain::Ngon, npts::Int)    = disperse(domain, npts)
+
+ngon(pts::AbstractVector{<:AbstractVector}) = Ngon(SVector{length(pts)}(map(item -> Point(item...), pts)))
+
+# TODO: Test `getdata` function with `Line` domains.
+# FIXME: Test `getdata` function returns correct number of points.
 
 """
     getpoint(ngon::Ngon, maxiter::Int=100_000) 

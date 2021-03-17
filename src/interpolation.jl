@@ -228,7 +228,7 @@ getinitf(::HInterp2D)  = (x, y) -> [0., 0.]
 
 Projects `pts` on a lower dimensioanl space by dropping the `drop` number of indexes. 
 """
-project(pts::PointVector, drop::Int=1) = [Point(pnt[1 : end - drop]...) for pnt in pts]
+project(pts::PointVector, drop::Int=1)     = [Point(pnt[1 : end - drop]...) for pnt in pts]
 project(pts::PointVector{2}, ::Interp1D)   = project(pts, 1)
 project(pts::PointVector{3}, ::HInterp1D)  = project(pts, 2)
 project(pts::PointVector{3}, ::Interp2D)   = project(pts, 1)
