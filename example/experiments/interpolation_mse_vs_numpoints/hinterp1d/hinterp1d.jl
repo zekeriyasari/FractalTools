@@ -5,6 +5,7 @@ using Makie
 
 # Construct interpolation data 
 f(x) = sin(2π * x)      
+g(x) = cos(2π * x)
 xi = 0. 
 xf = 1. 
 freevar = 0.001                
@@ -16,22 +17,24 @@ mse = map(npts) do npt
     # Construct interpolation data 
     x = collect(range(xi, xf, length=npt))
     y = f.(x)
-    pts = collect.(zip(x, y))
+    z = g.(x)
+    pts = collect.(zip(x, y, z))
 
     # Construct interpolation 
-    interp = interpolate(pts, Interp1D(freevar))
+    interp = interpolate(pts, HInterp1D(fill(freevar, 2, 2)))
 
     # Construct test data 
     xt = collect(range(xi, xf, length=ntpts))
 
     # Compute error
-    sum((f.(xt) - interp.(xt) ).^2) / length(xt)
+    fvals = getindex.(f.(xt), 1)
+    ivals = getindex.(interp.(xt), 1)
+    sum((fvals - ivals).^2) / length(xt)
 end 
 
 # Plot mse 
 fig = Figure() 
-ax = fig[1, 1] = Axis(fig, xlabel="Number of Points", ylabel="MSE", title="1D Interpolation MSE") 
+ax = fig[1, 1] = Axis(fig, xlabel="Number of Points", ylabel="MSE", title="1D Hidden Interpolation MSE") 
 stem!(ax, npts, mse, color=:black)
-save(joinpath(@__DIR__, "interp1d_mse.png"), fig)
+save(joinpath(@__DIR__, "hinterp1d_mse.png"), fig)
 display(fig)
-
