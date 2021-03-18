@@ -242,8 +242,22 @@ tessellate(pts::PointVector{3}, method::HInterp1D) = LineString(project(pts, met
 tessellate(pts::PointVector{3}, method::Interp2D)  = spt.Delaunay(project(pts, method))
 tessellate(pts::PointVector{4}, method::HInterp2D) = spt.Delaunay(project(pts, method))
 
-locate(pnt::AbstractPoint{1, T}, tess::LineString) where {T} = findfirst(((p1, p2),) -> p1[1] ≤ pnt[1] ≤ p2[1], tess)
-locate(pnt::AbstractPoint{2, T}, tess::PyObject)   where {T} = tess.find_simplex(pnt)[1] + 1  
+_locate(pnt::AbstractPoint{1, T}, tess::LineString) where {T} = findfirst(((p1, p2),) -> p1[1] ≤ pnt[1] ≤ p2[1], tess)
+_locate(pnt::AbstractPoint{2, T}, tess::PyObject)   where {T} = tess.find_simplex(pnt)[1] + 1  
+function locate(pnt::AbstractPoint, tess::Tessellation)
+    n = _locate(pnt, tess)
+    n == 0 || return n 
+    pnt = doubleprecision(pnt)
+    locate(pnt, tess) 
+end 
+
+doubleprecision(pnt::AbstractPoint{N, <:Real}) where {N} = Point(BigFloat.(pnt)...)
+function doubleprecision(pnt::AbstractPoint{N, <:BigFloat}) where {N}
+    @show precision(BigFloat), pnt
+    prec = 2 * precision(BigFloat)
+    prec ≤ MAXPREC ? setprecision(prec) : error("Exceeded maximum allowed precision $MAXPREC") 
+    Point(BigFloat.(pnt)...)
+end 
 
 # IFS coefficients of the interpolant is found by using a linear algrebraic equation system using the boundary conditions.
 # Each subtransformation in the transformations of a IFS maps a larger domain (Line in case of curve interpolation and
@@ -381,7 +395,7 @@ function wrapper((f, tess, mappings))
     function fnext(x...) 
         pnt = Point(x...) 
         n = locate(pnt, tess)
-        n == 0 && error("Point $pnt cannot be found.")
+        # n == 0 && error("Point $pnt cannot be found.")
         linv, F = mappings[n]
         val = linv(x...) 
         F(val..., f(val...)...)

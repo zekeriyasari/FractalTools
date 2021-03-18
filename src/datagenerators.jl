@@ -21,7 +21,7 @@ getdata(domain::Ngon, npts::Int)    = disperse(domain, npts)
 ngon(pts::AbstractVector{<:AbstractVector}) = Ngon(SVector{length(pts)}(map(item -> Point(item...), pts)))
 
 # TODO: Test `getdata` function with `Line` domains.
-# FIXME: Test `getdata` function returns correct number of points.
+# FIXME: #37 Test `getdata` function returns correct number of points.
 
 """
     getpoint(ngon::Ngon, maxiter::Int=100_000) 
