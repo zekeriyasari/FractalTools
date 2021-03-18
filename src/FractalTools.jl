@@ -14,6 +14,8 @@ import GeometryBasics: Ngon
 import Base: show, display
 import StatsBase: sample, Weights
 
+const MAXPREC = 1024    # Maximum precision for BigFloat arithmetic 
+
 function __init__()
     global spt = pyimport_conda("scipy.spatial", "scipy")
 end
