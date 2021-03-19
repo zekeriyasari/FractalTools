@@ -1,4 +1,4 @@
-# This file investigates MSE with respect to free variables 
+# This file investigates integration error with respect to free variables 
 
 using FractalTools 
 using GeometryBasics
@@ -13,22 +13,17 @@ ngon = Triangle(
 npts = 100
 pts = getdata(f, ngon, npts)
 
-# Construct test data 
-tpts = getdata(ngon, npts)
-ntpts = length(tpts)
-
 # Compute errors 
-fvals = map(pt -> f(pt...), tpts) 
+fvals = 35 / 48
 freevars = 0.001 : 0.001 : 0.025 
 mse = map(freevars) do freevar 
-    interp = interpolate(pts, Interp2D(freevar))
-    ivals = map(pt -> interp(pt...), tpts)
-    sum((fvals - ivals).^2) / ntpts
+    ival = integrate(pts, Interp2D(freevar))
+    abs(fval - ival)
 end 
 
 # Plot mse 
 fig = Figure() 
-ax = fig[1, 1] = Axis(fig, xlabel="Free Variable", ylabel="MSE", title="2D Interpolation MSE") 
+ax = fig[1, 1] = Axis(fig, xlabel="Free Variable", ylabel="Integration Error", title="2D Integration Error") 
 stem!(ax, freevars, mse, color=:black)
-save(joinpath(@__DIR__, "interp2d_mse.png"), fig)
+save(joinpath(@__DIR__, "integ2d_error.png"), fig)
 display(fig)

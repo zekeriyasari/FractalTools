@@ -9,10 +9,15 @@ f(x, y) = [
     x^2 + y^2 + 1, 
     x^2 - y^2
     ]
+# ngon = Triangle(
+#     Point(BigFloat(0.), BigFloat(0.)), 
+#     Point(BigFloat(1.), BigFloat(0.)), 
+#     Point(BigFloat(0.5), BigFloat(1.)))
+
 ngon = Triangle(
-    Point(BigFloat(0.), BigFloat(0.)), 
-    Point(BigFloat(1.), BigFloat(0.)), 
-    Point(BigFloat(0.5), BigFloat(1.)))
+    Point(BigFloat(-5.), BigFloat(-5.)), 
+    Point(BigFloat(5), BigFloat(-5.)), 
+    Point(BigFloat(0), BigFloat(5.)))
 npts = 100
 pts = getdata(f, ngon, npts)
 
