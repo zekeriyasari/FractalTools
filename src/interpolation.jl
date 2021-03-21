@@ -237,6 +237,7 @@ project(pts::PointVector{4}, ::HInterp2D)  = project(pts, 2)
 # We use tessellation to locate the points. The fractal interpolant that is returned by `interpolate` function is a piecewise
 # function. So to calculate the interpolant `interp` at a point `pnt`, we need to locate `pnt` to find the correct subdomain.
 # We use tessellations to locate the points. See also `locate` function 
+
 tessellate(pts::PointVector{2}, method::Interp1D)  = LineString(project(pts, method))
 tessellate(pts::PointVector{3}, method::HInterp1D) = LineString(project(pts, method)) 
 tessellate(pts::PointVector{3}, method::Interp2D)  = spt.Delaunay(project(pts, method))
@@ -253,7 +254,6 @@ end
 
 doubleprecision(pnt::AbstractPoint{N, <:Real}) where {N} = Point(BigFloat.(pnt)...)
 function doubleprecision(pnt::AbstractPoint{N, <:BigFloat}) where {N}
-    @show precision(BigFloat), pnt
     prec = 2 * precision(BigFloat)
     prec ≤ MAXPREC ? setprecision(prec) : error("Exceeded maximum allowed precision $MAXPREC") 
     Point(BigFloat.(pnt)...)
@@ -263,6 +263,7 @@ end
 # Each subtransformation in the transformations of a IFS maps a larger domain (Line in case of curve interpolation and
 # Triangle in case of surface interpolation) to a smaller domain. These mappings maps the boundary points of the larger
 # domains to boundary points of the smaller domains. `partition` function returns these smaller domains. 
+
 partition(pts::PointVector, method::AbstractCurveInterp) = LineString(pts) 
 function partition(pts::PointVector, method::AbstractSurfaceInterp, tess::Tessellation=tessellate(pts, method)) 
     trifaces = [TriangleFace(val...) for val in eachrow(tess.simplices .+ 1)]
@@ -273,6 +274,7 @@ end
 # of surface interpolations, the interpolation domain is triangle, than that triangle is the boundary. If the interpolation
 # domain is ngon (such as, tetragon, pentagon, hexagon, etc.) the triangle that can be drawn inside the convex hull of the
 # points and that has the largest area is returned.
+
 getboundary(pts::PointVector, ::AbstractCurveInterp) = Line(pts[1], pts[end])
 function getboundary(pts::PointVector, method::AbstractSurfaceInterp) 
     hull = spt.ConvexHull(collect(hcat(collect.(project(pts, method))...)') )
