@@ -20,6 +20,7 @@ function __init__()
     global spt = pyimport_conda("scipy.spatial", "scipy")
 end
 
+include("testfunctions.jl")
 include("datagenerators.jl")
 include("recipes.jl")
 include("ifs.jl")
