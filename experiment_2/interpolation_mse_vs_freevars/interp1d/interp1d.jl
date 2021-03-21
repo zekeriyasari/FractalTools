@@ -4,24 +4,21 @@ using FractalTools
 using Makie 
 
 # Construct interpolation data 
-f(x) = sin(2π * x)                      
-dx   = 0.1                              
-xi   = 0.                               
-xf   = 1.                               
-x    = collect(xi : dx : xf)            
-y    = f.(x)                            
-pts  = collect.(zip(x, y))     
+f = FractalTools.wen            # For irregular data 
+# f = FractalTools.sinusoid     # For regular data 
+line = [[0.], [1.]]
+pts = getdata(f, line, 11) 
 
 # Construct test data 
-xt   = collect(xi : 0.1dx : xf) 
-npts = length(xt) 
+tpts = getdata(line, 101)
+npts = length(tpts) 
 
 # Compute errors 
-fvals = f.(xt) 
+fvals = map(pnt -> f(pnt[1]), tpts)
 freevars = 0.001 : 0.01 : 0.999
 mse = map(freevars) do freevar 
     interp = interpolate(pts, Interp1D(freevar))
-    ivals = interp.(xt) 
+    ivals = map(pnt -> interp(pnt[1]), tpts)
     sum((fvals - ivals).^2) / npts 
 end 
 
