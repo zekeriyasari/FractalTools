@@ -13,14 +13,18 @@ Returns a vector of (d + m)-dimensional points that are dispersed randomly over 
 Returns a vector of d-dimensional points that are dispersed randomly over d-dimensioanl domain with vertex points
 `vtx`. `npts` is the number of points to be returned` 
 """
-getdata(f, vtx::AbstractVector{<:AbstractVector}, ninterpoints::Int=10, nedgepoints::Int=10) = 
-    getdata(f, ngon(vtx), ninterpoints, nedgepoints)
-getdata(vtx::AbstractVector{<:AbstractVector}, ninterpoints::Int=10, nedgepoints::Int=10) = 
-    getdata(ngon(vtx), ninterpoints, nedgepoints)
-getdata(f, domain::Ngon, ninterpoints::Int=10, nedgepoints::Int=10) = 
+function getdata end 
+
+getdata(f, vtx::AbstractVector{<:AbstractVector}, args::Int...) = getdata(f, ngon(vtx), args...)
+getdata(vtx::AbstractVector{<:AbstractVector}, args::Int...) = getdata(ngon(vtx), args...)
+
+getdata(domain::Line, nedgepoints::Int) = boundarypoints(domain, nedgepoints)
+getdata(f, domain::Line, nedgepoints::Int) = [Point(pnt..., f(pnt...)...) for pnt in boundarypoints(domain, nedgepoints)] 
+
+# nedgepoints=10 is for backwards compatibility
+getdata(domain::Ngon, ninterpoints::Int, nedgepoints::Int=10) = disperse(domain, ninterpoints, nedgepoints)
+getdata(f, domain::Ngon, ninterpoints::Int, nedgepoints::Int=10) = 
     [Point(pnt..., f(pnt...)...) for pnt in disperse(domain, ninterpoints, nedgepoints)] 
-getdata(domain::Ngon, ninterpoints::Int=10, nedgepoints::Int=10) = 
-    disperse(domain, ninterpoints, nedgepoints)
 
 ngon(pts::AbstractVector{<:AbstractVector}) = Ngon(SVector{length(pts)}(map(item -> Point(item...), pts)))
 
@@ -62,7 +66,6 @@ function disperse(ngon::Ngon, ninterpoints::Int, nedgepoints::Int)
     boundpoints = boundarypoints(ngon, nedgepoints)
     vcat(boundpoints, interpoints) |> unique
 end
-disperse(line::Line, ninterpoints::Int, nedgepoints::Int) = boundarypoints(line, nedgepoints)
 
 function interiorpoints(ngon::Ngon, ninterpoints::Int)
     allpnts = [getpoint(ngon) for i in 1 : 10 * ninterpoints]
