@@ -243,6 +243,14 @@ tessellate(pts::PointVector{3}, method::HInterp1D) = LineString(project(pts, met
 tessellate(pts::PointVector{3}, method::Interp2D)  = spt.Delaunay(project(pts, method))
 tessellate(pts::PointVector{4}, method::HInterp2D) = spt.Delaunay(project(pts, method))
 
+# Because of finite precison arithmetic, the location of a valid point may fail. To overcome this, we can switch to arbitrary
+# precision arithmetic (by using BigFloat) in the expense of increasing the computationonal complexity. However, not to
+# increase the computationonal complexity directly, the strategy employed here is this:  before switching completely to
+# arbitrary precision arithmetic, we first try to locate the point with finite precision (Float64 precision). If the point
+# cannot be located, we double the precision and try to locate the point again. We do this until maximum allowed
+# precison(specified to be 1024 bits as MAXPREC). If MAXPREC is reached and the point still cannot be found, the point
+# location fails with an error message.   
+
 _locate(pnt::AbstractPoint{1, T}, tess::LineString) where {T} = findfirst(((p1, p2),) -> p1[1] ≤ pnt[1] ≤ p2[1], tess)
 _locate(pnt::AbstractPoint{2, T}, tess::PyObject)   where {T} = tess.find_simplex(pnt)[1] + 1  
 function locate(pnt::AbstractPoint, tess::Tessellation)
@@ -363,7 +371,7 @@ end
 # FractalTools.Transformation object basically consists of the matrix A and vector b of an affine transformation w(x) = A * x
 # + b. However, a mapping is a subtransformation (defined as Ln: Ω ↦ Ωₙ and Fn: Ω × Rᵐ ↦ Rᵖ, where Ω is the interpolation
 # domain and Ωₙ is the subdomain obtained by partitioning the interpolation domian) of an affine transformation in an IFS.
-# So, we compute the mappings (i.e. subtransformations from transforms and use directly the mappings to compute the
+# So, we compute the mappings (i.e. subtransformations) from transforms and use directly the mappings to compute the
 # interpolant. 
 
 getmappings(transforms, method) = map(transform -> _getmapping(transform, method), transforms)
