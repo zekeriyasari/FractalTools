@@ -280,7 +280,7 @@ function getboundary(pts::PointVector, method::AbstractSurfaceInterp)
     hull = spt.ConvexHull(collect(hcat(collect.(project(pts, method))...)') )
     if length(hull.vertices) == 3   # Triangle  
         Triangle(Point.(pts[hull.vertices .+ 1])...)
-    else    # Ngon (tetragon, pentagon, hexagon)
+    else    # Ngon (tetragon, pentagon, hexagon, etc...)
         polygon = Ngon(
             SVector{length(hull.vertices)}(Point.(pts[hull.vertices .+ 1]))
         )
@@ -358,6 +358,13 @@ function _gettransform(outtrig::Triangle, intrig::Triangle, freevar::AbstractMat
     b = [b1, b2, b3, b4]
 	Transformation(A, b)
 end 
+
+# Here transforms and mappings are different. The type of a transform is FractalTools.Transformation. A
+# FractalTools.Transformation object basically consists of the matrix A and vector b of an affine transformation w(x) = A * x
+# + b. However, a mapping is a subtransformation (defined as Ln: Ω ↦ Ωₙ and Fn: Ω × Rᵐ ↦ Rᵖ, where Ω is the interpolation
+# domain and Ωₙ is the subdomain obtained by partitioning the interpolation domian) of an affine transformation in an IFS.
+# So, we compute the mappings (i.e. subtransformations from transforms and use directly the mappings to compute the
+# interpolant. 
 
 getmappings(transforms, method) = map(transform -> _getmapping(transform, method), transforms)
 
