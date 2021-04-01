@@ -3,6 +3,6 @@ Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 FractalTools = "b405c40b-1ee4-4202-972e-f2b10e481766"
 
 [compat]
-FractalTools = "0.1"
 Documenter = "0.25"
+FractalTools = "0.1"
 julia = "1.5"
