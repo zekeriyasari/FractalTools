@@ -267,8 +267,9 @@ function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
     if allocated
         _randalg_sequential(set, ws, numiter, probs)
     else 
+        # NOTE: The set is assumed to have just a single initial point. If the set consists of more element, then we need a fix.
         ch = Channel(0)
-        task = @task _randalg_sequential(ch, ws, numiter, probs)
+        task = @async _randalg_sequential(ch, only(set), ws, numiter, probs)
         bind(ch, task)
         ch
     end 
