@@ -1,6 +1,6 @@
 # This file includes IFS tools.
 
-export IFS, attractor, DetAlg, RandAlg, dimension, contfactor
+export IFS, attractor, DetAlg, RandAlg, dimension, contfactor, Sierpinski, Fern, Square, Tree
 
 """ 
     $(TYPEDEF) 
@@ -139,15 +139,15 @@ Attractor of `IFS` type
 
     $TYPEDFIELDS
 """
-struct Attractor{T, S, R}
+struct Attractor{T, S, R1, R2}
     "IFS of Attractor"
     ifs::T
     "Type of algorithm to be used to compute attractor(Options are DetAlg and RandAlg"
     alg::S
     "Initial set of attractor"
-    initset::R
+    initset::R1
     "Set of the attractor"
-    set::R
+    set::R2
     "Number of iterations"
     numiter::Int
     "Sequential or parallel"
@@ -218,29 +218,41 @@ the number of transient iterations. If `parallel` is true, attractor is computed
 `placedependent` is true, the probabilties of the ifs are dependent on the coordinates `x`. This dependency `p(x)` is given
 via the parameters `α` and `β` where p(x) = α x + β.
 """
-function randalg(ifs, initset; numiter=100, numtransient=10, parallel=false, placedependent=false, α=nothing, β=nothing)
+function randalg(ifs, initset; numiter=100, numtransient=10, parallel=false, placedependent=false, α=nothing, β=nothing, allocated::Bool=false)
     ws = ifs.ws
     probs = ifs.probs
     if parallel
         if placedependent
-            transient = randalg_sequential_pd(ws, copy(initset), numtransient, probs, α, β)
-            set = randalg_parallel_pd(ws, transient, numiter, probs, α, β)
+            transient = randalg_sequential_pd(ws, copy(initset), numtransient, probs, α, β, allocated)
+            set = randalg_parallel_pd(ws, transient, numiter, probs, α, β, allocated)
         else
-            transient = randalg_sequential(ws, copy(initset), numtransient, probs)
-            set = randalg_parallel(ws, transient, numiter, probs)
+            transient = randalg_sequential(ws, copy(initset), numtransient, probs, allocated)
+            set = randalg_parallel(ws, transient, numiter, probs, allocated)
         end
     else
         if placedependent
-            set = randalg_sequential_pd(ws, copy(initset), numiter, probs, α,β)
+            set = randalg_sequential_pd(ws, copy(initset), numiter, probs, α, β, allocated)
         else
-            set = randalg_sequential(ws, copy(initset), numiter, probs)
+            set = randalg_sequential(ws, copy(initset), numiter, probs, allocated)
         end
     end
     Attractor(ifs, RandAlg(), initset, set, numiter, parallel)
 end
 
 # Computes the attractor of an ifs via random algorithm sequentially. 
-function randalg_sequential(ws, set, numiter, probs)
+function _randalg_sequential(ch::AbstractChannel, xinit, ws, numiter, probs)
+    @info "Here...."
+    weights = Weights(probs)
+    for i = 1 : numiter
+        trfmi = sample(ws, weights)
+        xnew = trfmi(xinit)
+        put!(ch, xnew)
+        xinit = xnew
+    end
+    ch
+end
+
+function _randalg_sequential(set::AbstractVector, ws, numiter, probs)
     weights = Weights(probs)
     xi = set[end]
     for i = 1 : numiter
@@ -248,24 +260,36 @@ function randalg_sequential(ws, set, numiter, probs)
         xi = trfmi(xi)
         push!(set, xi)
     end
-    set
+    ch
+end
+
+function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
+    if allocated
+        _randalg_sequential(set, ws, numiter, probs)
+    else 
+        ch = Channel(0)
+        task = @task _randalg_sequential(ch, ws, numiter, probs)
+        bind(ch, task)
+        ch
+    end 
 end
 
 
 # Computes the attractor of an ifs via random algorithm sequentially with placedependent probabilties.
-function randalg_sequential_pd(ws, set, numiter, probs, α, β)
+function randalg_sequential_pd(ws, set, numiter, probs, α, β, allocated::Bool=false)
+    # TODO: Impletement no allocation method 
     xi = set[end]
     for i = 1 : numiter
         trfmi = sample(ws, Weights(probs))
         xi = trfmi(xi)
         probs = α * xi + β
-        push!(set, xi)
     end
     set
 end
 
 # Computes the attractor of an ifs via random algorithm in parallel. 
-function randalg_parallel(ws, set, numiter, probs)
+function randalg_parallel(ws, set, numiter, probs, allocated::Bool=false)
+    # TODO: Impletement no allocation method 
     weights = Weights(probs)
     loadprocs()
     vcat(pmap(process_chunk, [(ws, set, floor(Int, numiter / nworkers()), weights) for i =  1 : nworkers()])...)
