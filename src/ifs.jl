@@ -241,7 +241,6 @@ end
 
 # Computes the attractor of an ifs via random algorithm sequentially. 
 function _randalg_sequential(ch::AbstractChannel, xinit, ws, numiter, probs)
-    @info "Here...."
     weights = Weights(probs)
     for i = 1 : numiter
         trfmi = sample(ws, weights)
