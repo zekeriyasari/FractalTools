@@ -1,5 +1,7 @@
 # This file includes IFS tools.
 
+# TODO : Generalize and contruct IFS.σ
+
 export IFS, attractor, DetAlg, RandAlg, dimension, contfactor, Sierpinski, Fern, Square, Tree
 
 """ 
@@ -242,6 +244,7 @@ end
 # Computes the attractor of an ifs via random algorithm sequentially. 
 function _randalg_sequential(ch::AbstractChannel, xinit, ws, numiter, probs)
     weights = Weights(probs)
+    #TODO: Cancel the numiter, determine the post-error, K(contraction)
     for i = 1 : numiter
         trfmi = sample(ws, weights)
         xnew = trfmi(xinit)
@@ -251,6 +254,48 @@ function _randalg_sequential(ch::AbstractChannel, xinit, ws, numiter, probs)
     ch
 end
 
+#TODO: Cancel the numiter, determine the post-error, K(contraction), choose num_iter from consraction factor
+
+function estimate_contraction_factor(ws)
+    σ = zeros(lenght(ws))
+    for i, transformation in ws
+        σ[i] = norm(transformation.A, inf)
+    end
+end
+
+
+function _randalg_sequential(ch::AbstractChannel, ws, probs, xinit=nothing; chunk_size=1, num_iter=nothing)
+    if xinit=nothing
+        n , m = size(ws[1].b)
+        xinit =rand(n)
+    else
+        n , m = size(xinit)
+    end
+    σ, index= findmax(estimate_contraction_factor(ws))
+    if num_iter = nothing
+        x1 = ws[index](xinit)
+        k = (log(ϵ) - log(norm(x1-xinit))) / log(σ) + 1
+    else
+        k = num_iter
+    end
+    weights = Weights(probs)
+    xnew = xinit
+    for i = 1 : k
+        trfmi = sample(ws, weights)
+        xnew = trfmi(xnew)
+    end
+    chunk = zero(n, chunk_size) 
+    while true
+        for i = 1 : chunk_size
+            trfmi = sample(ws, weights)
+            xnew = trfmi(xnew)
+            chunk[:,i] = xnew
+        end
+        put!(ch, chunk)
+    end
+end
+
+
 function _randalg_sequential(set::AbstractVector, ws, numiter, probs)
     weights = Weights(probs)
     xi = set[end]
@@ -259,7 +304,6 @@ function _randalg_sequential(set::AbstractVector, ws, numiter, probs)
         xi = trfmi(xi)
         push!(set, xi)
     end
-    ch
 end
 
 function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
@@ -268,10 +312,21 @@ function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
     else 
         # NOTE: The set is assumed to have just a single initial point. If the set consists of more element, then we need a fix.
         ch = Channel(0)
-        task = @async _randalg_sequential(ch, only(set), ws, numiter, probs)
+        # task = @async _randalg_sequential(ch, only(set), ws, numiter, probs)
+        task = @async _randalg_sequential(ch, ws, probs)
         bind(ch, task)
         ch
     end 
+end
+
+
+function randalg_sequential_generator(ws, probs, args...)
+        # NOTE: The set is assumed to have just a single initial point. If the set consists of more element, then we need a fix.
+        ch = Channel(0)
+        # task = @async _randalg_sequential(ch, only(set), ws, numiter, probs)
+        task = @async _randalg_sequential(ch, ws, probs, args...)
+        bind(ch, task)
+        ch
 end
 
 
@@ -333,3 +388,4 @@ function loadprocs(numprocs=Base.Sys.CPU_THREADS - 1 - nprocs())
     addprocs(numprocs)
     @everywhere @eval using FractalTools
 end
+
