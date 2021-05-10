@@ -55,26 +55,35 @@ ifs = IFS(w)
 # end
 
 function _randalg_sequential(ch::AbstractChannel, ws, probs, xinit=nothing; chunk_size=1, num_iter=nothing, ϵ = 1e-10)
-    if xinit=nothing
+    # Compute initial set with a single point.
+    if xinit === nothing
         n = size(ws[1].b)[1]
-        xinit =rand(n)
+        xinit = rand(n)       
     else
         n = size(xinit)[1]
     end
-    σ, index= findmax(contfactor.(ws))
-    if num_iter = nothing
+
+    # Compute number of iterations
+    σ, index = findmax(contfactor.(ws))
+    if num_iter === nothing
+        # Compute num_iter with respect to ϵ
         x1 = ws[index](xinit)
-        _k = (log(ϵ) - log(norm(x1-xinit))) / log(σ) + 1
+        _k = (log(ϵ) - log(norm(x1 - xinit))) / log(σ) + 1
         k = Int(floor(_k))
     else
+        # Assign num_iter directly
         k = num_iter
     end
+
+    # Compute transients
     weights = Weights(probs)
     xnew = xinit
     for i = 1 : k
         trfmi = sample(ws, weights)
         xnew = trfmi(xnew)
     end
+
+    # Compute attractor
     chunk = zeros(n, chunk_size) 
     while true
         for i = 1 : chunk_size
