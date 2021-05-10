@@ -2,6 +2,7 @@
 
 export IFS, attractor, RandAlg, dimension, contfactor
 
+
 struct Transformation{T1<:AbstractMatrix{<:Real}, T2<:AbstractVector{<:Real}}
     "Transformation matrix"
     A::T1 
@@ -10,8 +11,7 @@ struct Transformation{T1<:AbstractMatrix{<:Real}, T2<:AbstractVector{<:Real}}
 end 
 
 (w::Transformation)(x) = w.A * x + w.b
-dimension(w::Transformation) = size(w.A,1)
-contfactor(w::Transformation) = norm(w.A)
+
 
 struct IFS{T1<:AbstractVector{<:Transformation}, T2<:AbstractVector{<:Real}}
     "Vector of transformations of IFS"
@@ -27,8 +27,71 @@ function IFS(ws::T1, probs::T2) where {T1, T2}
 end
 IFS(ws) = (n = length(ws); IFS(ws, 1  / n * ones(n)))
 
+
+dimension(w::Transformation) = size(w.A,1)
+contfactor(w::Transformation) = norm(w.A)
 dimension(ifs::IFS) = dimension(ifs.ws[1])
 contfactor(ifs::IFS) = maximum(contfactor.(ifs.ws))
+
+# An example of one dimensional ifs
+A1 = reshape([1/2],1,1)
+b1 = [0]
+A2 = reshape([1/2],1,1)
+b2 = [1/2]
+
+w1 = Transformation(A1,b1)
+w2 = Transformation(A2,b2)
+
+w = [w1, w2]
+ifs = IFS(w)
+
+
+# function estimate_contraction_factor(ws)
+#     _length = length(ws)
+#     σ = zeros(_length)
+#     for i = 1 : _length
+#         σ[i] = norm(ws.A, inf)
+#     end
+# end
+
+function _randalg_sequential(ch::AbstractChannel, ws, probs, xinit=nothing; chunk_size=1, num_iter=nothing, ϵ = 1e-10)
+    if xinit=nothing
+        n = size(ws[1].b)[1]
+        xinit =rand(n)
+    else
+        n = size(xinit)[1]
+    end
+    σ, index= findmax(contfactor.(ws))
+    if num_iter = nothing
+        x1 = ws[index](xinit)
+        _k = (log(ϵ) - log(norm(x1-xinit))) / log(σ) + 1
+        k = Int(floor(_k))
+    else
+        k = num_iter
+    end
+    weights = Weights(probs)
+    xnew = xinit
+    for i = 1 : k
+        trfmi = sample(ws, weights)
+        xnew = trfmi(xnew)
+    end
+    chunk = zeros(n, chunk_size) 
+    while true
+        for i = 1 : chunk_size
+            trfmi = sample(w, weights)
+            xnew = trfmi(xnew)
+            chunk[:,i] = xnew
+        end
+        put!(ch, chunk)
+    end
+end
+
+function randalg_sequential_generator(ws, probs, args...)
+    ch = Channel(0)
+    task = @async _randalg_sequential(ch, ws, probs, args...)
+    bind(ch, task)
+    ch
+end
 
 struct DetAlg end
 struct RandAlg end
@@ -75,49 +138,9 @@ function randalg(ifs, initset; numiter=100, numtransient=10, parallel=false, pla
 end
 
 
-function estimate_contraction_factor(ws)
-    σ = zeros(lenght(ws))
-    for i, transformation in ws
-        σ[i] = norm(transformation.A, inf)
-    end
-end
-
-function _randalg_sequential(ch::AbstractChannel, ws, probs, xinit=nothing; chunk_size=1, num_iter=nothing)
-    if xinit=nothing
-        n , m = size(ws[1].b)
-        xinit =rand(n)
-    else
-        n , m = size(xinit)
-    end
-    σ, index= findmax(estimate_contraction_factor(ws))
-    if num_iter = nothing
-        x1 = ws[index](xinit)
-        k = (log(ϵ) - log(norm(x1-xinit))) / log(σ) + 1
-    else
-        k = num_iter
-    end
-    weights = Weights(probs)
-    xnew = xinit
-    for i = 1 : k
-        trfmi = sample(ws, weights)
-        xnew = trfmi(xnew)
-    end
-    chunk = zero(n, chunk_size) 
-    while true
-        for i = 1 : chunk_size
-            trfmi = sample(ws, weights)
-            xnew = trfmi(xnew)
-            chunk[:,i] = xnew
-        end
-        put!(ch, chunk)
-    end
-end
 
 
-function randalg_sequential_generator(ws, probs, args...)
-    ch = Channel(0)
-    task = @async _randalg_sequential(ch, ws, probs, args...)
-    bind(ch, task)
-    ch
-end
+
+
+
 
