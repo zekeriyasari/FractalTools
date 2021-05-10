@@ -261,6 +261,8 @@ function estimate_contraction_factor(ws)
     for i, transformation in ws
         σ[i] = norm(transformation.A, inf)
     end
+    # TODO : Returns nothing
+    σ
 end
 
 
