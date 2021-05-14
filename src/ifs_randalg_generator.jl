@@ -1,8 +1,9 @@
-# This file includes IFS tools.
+using LinearAlgebra
+using StatsBase
 
 export IFS, attractor, RandAlg, dimension, contfactor
 
-
+#TODO : Affine Transformation
 struct Transformation{T1<:AbstractMatrix{<:Real}, T2<:AbstractVector{<:Real}}
     "Transformation matrix"
     A::T1 
@@ -33,28 +34,9 @@ contfactor(w::Transformation) = norm(w.A)
 dimension(ifs::IFS) = dimension(ifs.ws[1])
 contfactor(ifs::IFS) = maximum(contfactor.(ifs.ws))
 
-# An example of one dimensional ifs
-A1 = reshape([1/2],1,1)
-b1 = [0]
-A2 = reshape([1/2],1,1)
-b2 = [1/2]
+#TODO : \sigma  of the IFS's parameter
 
-w1 = Transformation(A1,b1)
-w2 = Transformation(A2,b2)
-
-w = [w1, w2]
-ifs = IFS(w)
-
-
-# function estimate_contraction_factor(ws)
-#     _length = length(ws)
-#     σ = zeros(_length)
-#     for i = 1 : _length
-#         σ[i] = norm(ws.A, inf)
-#     end
-# end
-
-function _randalg_sequential(ch::AbstractChannel, ws, probs, xinit=nothing; chunk_size=1, num_iter=nothing, ϵ = 1e-10)
+function _randalg_sequential(ch::AbstractChannel, ws, probs, xinit=nothing; num_iter=nothing, chunk_size=10, ϵ = 1e-8)
     # Compute initial set with a single point.
     if xinit === nothing
         n = size(ws[1].b)[1]
@@ -69,7 +51,7 @@ function _randalg_sequential(ch::AbstractChannel, ws, probs, xinit=nothing; chun
         # Compute num_iter with respect to ϵ
         x1 = ws[index](xinit)
         _k = (log(ϵ) - log(norm(x1 - xinit))) / log(σ) + 1
-        k = Int(floor(_k))
+        k = Int(ceil(_k))
     else
         # Assign num_iter directly
         k = num_iter
@@ -102,54 +84,21 @@ function randalg_sequential_generator(ws, probs, args...)
     ch
 end
 
-struct DetAlg end
-struct RandAlg end
-struct Attractor{T, S, R1, R2}
-    "IFS of Attractor"
-    ifs::T
-    "Type of algorithm to be used to compute attractor(Options are DetAlg and RandAlg"
-    alg::S
-    "Initial set of attractor"
-    initset::R1
-    "Set of the attractor"
-    set::R2
-    "Number of iterations"
-    numiter::Int
-    "Sequential or parallel"
-    parallel::Bool
-end
+# An example of one dimensional ifs
+A1 = reshape([1/2],1,1)
+b1 = [0]
+A2 = reshape([1/2],1,1)
+b2 = [1/2]
 
-attractor(ifs, initset; alg=RandAlg(), kwargs...) = typeof(alg) == DetAlg ? 
-                                                   randalg(ifs,initset; kwargs...) : 
-                                                   detalg(ifs,initset; kwargs...)
+w1 = Transformation(A1,b1)
+w2 = Transformation(A2,b2)
 
-function randalg(ifs, initset; numiter=100, numtransient=10, parallel=false, placedependent=false, α=nothing, β=nothing, allocated::Bool=false, args...)
-    ws = ifs.ws
-    probs = ifs.probs
-    if parallel
-        if placedependent
-            transient = randalg_sequential_pd(ws, copy(initset), numtransient, probs, α, β, allocated)
-            set = randalg_parallel_pd(ws, transient, numiter, probs, α, β, allocated)
-        else
-            transient = randalg_sequential(ws, copy(initset), numtransient, probs, allocated)
-            set = randalg_parallel(ws, transient, numiter, probs, allocated)
-        end
-    else
-        if placedependent
-            set = randalg_sequential_pd(ws, copy(initset), numiter, probs, α, β, allocated)
-        else
-            # set = randalg_sequential(ws, copy(initset), numiter, probs, allocated)
-            # *************** check ************* #
-            set = randalg_sequential_generator(ws, probs, args...)
-        end
-    end
-    Attractor(ifs, RandAlg(), initset, set, numiter, parallel)
-end
+w = [w1, w2]
+ifs = IFS(w)
 
+generator = randalg_sequential_generator(ifs.ws, ifs.probs)
 
-
-
-
+take!(generator)
 
 
 
