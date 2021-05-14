@@ -226,7 +226,7 @@ getinitf(::HInterp2D)  = (x, y) -> [0., 0.]
 """
     $SIGNATURES
 
-Projects `pts` on a lower dimensioanl space by dropping the `drop` number of indexes. 
+Projects `pts` on a lower dimensional space by dropping the `drop` number of indexes. 
 """
 project(pts::PointVector, drop::Int=1)     = [Point(pnt[1 : end - drop]...) for pnt in pts]
 project(pts::PointVector{2}, ::Interp1D)   = project(pts, 1)
@@ -275,6 +275,7 @@ end
 # points and that has the largest area is returned.
 getboundary(pts::PointVector, ::AbstractCurveInterp) = Line(pts[1], pts[end])
 function getboundary(pts::PointVector, method::AbstractSurfaceInterp) 
+    # TODO: Add methods for nonconvex boundaries #42
     hull = spt.ConvexHull(collect(hcat(collect.(project(pts, method))...)') )
     if length(hull.vertices) == 3   # Triangle  
         Triangle(Point.(pts[hull.vertices .+ 1])...)
@@ -288,7 +289,7 @@ function getboundary(pts::PointVector, method::AbstractSurfaceInterp)
     end 
 end 
 
-# `gettransforms` returns tranforms that maps outer domains to smaller domains in the interpolation domain. 
+# `gettransforms` returns tranforms that map outer domains to smaller domains in the interpolation domain. 
 function gettransforms(pts::PointVector, method::AbstractInterp) 
     parts = partition(pts, method)
     n = length(parts)
@@ -388,6 +389,7 @@ function _getmapping(transform, method::HInterp2D)
 end 
 
 # Main iteration of the initial function `f0` for `niter` iterations. 
+# TODO: Calculate `niter` with respect to a given ϵ
 wrap(f0, tess::Tessellation, mappings::AbstractVector{<:Tuple{T, S}}, niter::Int) where {T, S} = 
     ((f0, tess, mappings)) |> ∘((wrapper for i in 1 : niter)...) 
 
