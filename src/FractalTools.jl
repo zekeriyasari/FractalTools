@@ -26,5 +26,8 @@ include("recipes.jl")
 include("ifs.jl")
 include("interpolation.jl")
 include("integration.jl")
+include("integration_helpers.jl")
+
+
 
 end # module

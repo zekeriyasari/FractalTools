@@ -1,13 +1,19 @@
 # using FractalAntennaTools
 # using FractalTools
+using LinearAlgebra
+export is_in_Ball, heaviside, interval
 
-# function heaviside(t)
-#     0.5 .* (sign.(t) .+ 1)
-# end
+function is_in_Ball(x, x0, ϵ, norm_func = norm, args...)
+    return norm_func.(x - x0, args...) < ϵ
+end
 
-# function interval(t, a, b)
-#     heaviside.(t-a) .- heaviside.(t-b)
-# end 
+function heaviside(t)
+    0.5 .* (sign.(t) .+ 1)
+end
+
+function interval(t, a, b)
+    heaviside.(t-a) .- heaviside.(t-b)
+end 
 
 
 # function getatrset1D(N_iter)

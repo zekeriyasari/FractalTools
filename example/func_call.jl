@@ -10,9 +10,8 @@ function f2(x2, y2=1, z2=2; t2=3, u2=5)
 end 
 
 function f3(x3, f1args = tuple(), f2args = tuple(); f1kwargs = (;), f2kwargs=(;))
-    @info "Calling f1"
     f1(x3, f1args...; f1kwargs...)
-    @info "Calling f2"
+
     f2(x3, f2args...; f2kwargs...)
 end
 
