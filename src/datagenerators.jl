@@ -13,7 +13,6 @@ Returns a vector of (d + m)-dimensional points that are dispersed randomly over 
 Returns a vector of d-dimensional points that are dispersed randomly over d-dimensioanl domain with vertex points
 `vtx`. `npts` is the number of points to be returned` 
 """
-# TODO: Add example to docstrings
 getdata(f, vtx::AbstractVector{<:AbstractVector}, npts::Int) = getdata(f, ngon(vtx), npts)
 getdata(vtx::AbstractVector{<:AbstractVector}, npts::Int)    = getdata(ngon(vtx), npts)
 getdata(f, domain::Ngon, npts::Int) = [Point(pnt..., f(pnt...)...) for pnt in disperse(domain, npts)] 
