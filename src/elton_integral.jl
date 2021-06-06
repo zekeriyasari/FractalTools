@@ -1,41 +1,50 @@
-# using FractalAntennaTools
-# using FractalTools
+using FractalTools
+using LinearAlgebra
 
-# d \mü 
-# TODO if there not exist points channel, use a channel generated random points. 
-# TODO ::AbstractFunction vs.
-function elton_integral(func, ind_func, points::Channel; func_params::NamedTuple=(;), ind_params::NamedTuple=(;), ϵ::Real=1e-6, max_iter::Int=Int(1e9))
-    number = 0
-    total = 0
-    Δ = 0
+export elton_integral
+
+function elton_integral(func, ind_func, points::Channel, func_params=tuple(), ind_params=tuple(), ϵ::Real=1e-10, max_iter=1e9, chunk_size = 1024)
+    number_of_points = 0
+    old_number_of_points = 0
+    result = 0
+    Δ = 1e15
     # measure = prod(b - a)
-    while Δ ≥ ϵ || number ≤ max_iter
-        old_total = total 
-        set_of_points = take!(points)
-        indicator = ind_func.(set_of_points, ind_params...)
-        filtered_set_of_points = set_of_points .* indicator
-        number += sum(indicator)
+    # while Δ >= ϵ && number_of_points ≤ max_iter
+    while number_of_points ≤ max_iter
+        old_number_of_points = number_of_points
+        old_result = result
+        number_of_indicator = 0
+        set_of_points = []
+        indicator = []
+        while number_of_indicator < chunk_size 
+            set_of_points = take!(points)
+            indicator = ind_func.(set_of_points, ind_params...)
+            number_of_indicator = sum(indicator .> 0)
+        end
+        filtered_set_of_points = set_of_points[indicator.>0] .* indicator[indicator .> 0]
+        number_of_points += number_of_indicator
         val =  func.(filtered_set_of_points, func_params...) 
-        total += sum(val)
-        Δ = abs(total / (number + 1) - old_total / (number + 1 + chunk_size))
+        result = (1 / (number_of_points +1)) * ((old_number_of_points + 1) * old_result + sum(val))
+        Δ = abs(result - old_result) 
     end
-    # elton_val = total ./ (number + 1) 
-    # elton_val = total ./ (number + 1) * measure
-    return number > max_iter & Δ > ϵ,  elton_val, Δ
+    return  result , Δ, Δ > ϵ && number_of_points > max_iter, number_of_points
 end
 
 
-# function elton_general(func, ind_func, atr, a, b, args...)
-#     number = 0
-#     total = 0
-#     measure = prod(b-a)
-#     for point in atr.set
-#         indicator  = ind_func.(point, a, b)
-#         if all(indicator .> 0 )
-#             number += 1
-#             val =  func(point, args...)
-#             total += sum(val)
-#         end
-#     end
-#     elton_val = total ./ (number + 1) * measure
-# end
+
+
+# An example of one dimensional ifs
+# A1 = reshape([1/2],1,1)
+# b1 = [0]
+# A2 = reshape([1/2],1,1)
+# b2 = [1/2]
+
+# w1 = Transformation(A1,b1)
+# w2 = Transformation(A2,b2)
+
+# w = [w1, w2]
+# ifs = IFS(w)
+# generator = randalg_sequential_generator(ifs.ws, ifs.probs)
+
+# elton_integral(dipole_pocklington, is_in_Ball, generator,(0.9,0.005,2π), (0.9, 0.05))
+

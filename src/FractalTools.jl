@@ -27,6 +27,9 @@ include("ifs.jl")
 include("interpolation.jl")
 include("integration.jl")
 include("integration_helpers.jl")
+include("elton_integral.jl")
+include("deleteme.jl")
+# include("ifs_randalg_generator.jl")
 
 
 

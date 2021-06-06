@@ -1,8 +1,10 @@
 # This file includes IFS tools.
-
-# TODO : Generalize and contruct IFS.σ
+using LinearAlgebra
+using StatsBase
 
 export IFS, attractor, DetAlg, RandAlg, dimension, contfactor, Sierpinski, Fern, Square, Tree
+
+export w, Transformation, randalg_sequential_for_generator, randalg_sequential_generator
 
 """ 
     $(TYPEDEF) 
@@ -49,11 +51,12 @@ struct IFS{T1<:AbstractVector{<:Transformation}, T2<:AbstractVector{<:Real}}
     ws::T1 
     "Vector of probabilities of IFS"
     probs::T2
-    function IFS(ws::T1, probs::T2) where {T1, T2} 
-        # Note: For the floating point numbers, aproximation(≈), instead of exact equal (==), should be considered
-        sum(probs) ≈ 1 || throw(ArgumentError("Sum of probabilities must be 1."))
-        new{T1, T2}(ws, probs) 
-    end
+end
+
+function IFS(ws::T1, probs::T2) where {T1, T2} 
+    # Note: For the floating point numbers, aproximation(≈), instead of exact equal (==), should be considered
+    sum(probs) ≈ 1 || throw(ArgumentError("Sum of probabilities must be 1."))
+    new{T1, T2}(ws, probs) 
 end
 IFS(ws) = (n = length(ws); IFS(ws, 1  / n * ones(n))) 
 
@@ -241,6 +244,21 @@ function randalg(ifs, initset; numiter=100, numtransient=10, parallel=false, pla
     Attractor(ifs, RandAlg(), initset, set, numiter, parallel)
 end
 
+
+
+function _randalg_sequential(set::AbstractVector, ws, numiter, probs)
+    weights = Weights(probs)
+    xi = set[end]
+    for i = 1 : numiter
+        trfmi = sample(ws, weights)
+        xi = trfmi(xi)
+        push!(set, xi)
+    end
+    return set
+end
+
+
+
 # Computes the attractor of an ifs via random algorithm sequentially. 
 function _randalg_sequential(ch::AbstractChannel, xinit, ws, numiter, probs)
     weights = Weights(probs)
@@ -254,39 +272,50 @@ function _randalg_sequential(ch::AbstractChannel, xinit, ws, numiter, probs)
     ch
 end
 
-#TODO: Cancel the numiter, determine the post-error, K(contraction), choose num_iter from consraction factor
-
-function estimate_contraction_factor(ws)
-    σ = zeros(lenght(ws))
-    for i, transformation in ws
-        σ[i] = norm(transformation.A, inf)
-    end
-    # TODO : Returns nothing
-    σ
+function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
+    if allocated
+        _randalg_sequential(set, ws, numiter, probs)
+    else 
+        # NOTE: The set is assumed to have just a single initial point. If the set consists of more element, then we need a fix.
+        ch = Channel(0)
+        task = @async _randalg_sequential(ch, only(set), ws, numiter, probs)
+        # task = @async _randalg_sequential(ch, ws, probs)
+        bind(ch, task)
+        ch
+    end 
 end
 
-
-function _randalg_sequential(ch::AbstractChannel, ws, probs, xinit=nothing; chunk_size=1, num_iter=nothing)
-    if xinit=nothing
-        n , m = size(ws[1].b)
-        xinit =rand(n)
+function randalg_sequential_for_generator(ch::AbstractChannel, ws, probs, xinit=nothing; num_iter=nothing, chunk_size=1024 * 2, ϵ = 1e-8)
+    # Compute initial set with a single point.
+    if xinit === nothing
+        n = size(ws[1].b)[1]
+        xinit = rand(n)       
     else
-        n , m = size(xinit)
+        n = size(xinit)[1]
     end
-    σ, index= findmax(estimate_contraction_factor(ws))
-    if num_iter = nothing
+
+    # Compute number of iterations
+    σ, index = findmax(contfactor.(ws))
+    if num_iter === nothing
+        # Compute num_iter with respect to ϵ
         x1 = ws[index](xinit)
-        k = (log(ϵ) - log(norm(x1-xinit))) / log(σ) + 1
+        _k = (log(ϵ) - log(norm(x1 - xinit))) / log(σ) + 1
+        k = Int(ceil(_k))
     else
+        # Assign num_iter directly
         k = num_iter
     end
+
+    # Compute transients
     weights = Weights(probs)
     xnew = xinit
     for i = 1 : k
         trfmi = sample(ws, weights)
         xnew = trfmi(xnew)
     end
-    chunk = zero(n, chunk_size) 
+
+    # Compute attractor
+    chunk = zeros(n, chunk_size) 
     while true
         for i = 1 : chunk_size
             trfmi = sample(ws, weights)
@@ -297,39 +326,23 @@ function _randalg_sequential(ch::AbstractChannel, ws, probs, xinit=nothing; chun
     end
 end
 
-
-function _randalg_sequential(set::AbstractVector, ws, numiter, probs)
-    weights = Weights(probs)
-    xi = set[end]
-    for i = 1 : numiter
-        trfmi = sample(ws, weights)
-        xi = trfmi(xi)
-        push!(set, xi)
-    end
-end
-
-function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
-    if allocated
-        _randalg_sequential(set, ws, numiter, probs)
-    else 
-        # NOTE: The set is assumed to have just a single initial point. If the set consists of more element, then we need a fix.
-        ch = Channel(0)
-        # task = @async _randalg_sequential(ch, only(set), ws, numiter, probs)
-        task = @async _randalg_sequential(ch, ws, probs)
-        bind(ch, task)
-        ch
-    end 
-end
-
-
 function randalg_sequential_generator(ws, probs, args...)
-        # NOTE: The set is assumed to have just a single initial point. If the set consists of more element, then we need a fix.
-        ch = Channel(0)
-        # task = @async _randalg_sequential(ch, only(set), ws, numiter, probs)
-        task = @async _randalg_sequential(ch, ws, probs, args...)
-        bind(ch, task)
-        ch
+    ch = Channel(0)
+    task = @async randalg_sequential_for_generator(ch, ws, probs, args...)
+    bind(ch, task)
+    ch
 end
+
+#TODO: Cancel the numiter, determine the post-error, K(contraction), choose num_iter from consraction factor
+
+# function estimate_contraction_factor(ws)
+#     σ = zeros(lenght(ws))
+#     for i, transformation in ws
+#         σ[i] = norm(transformation.A, inf)
+#     end
+#     # TODO : Returns nothing
+#     σ
+# end
 
 
 # Computes the attractor of an ifs via random algorithm sequentially with placedependent probabilties.
