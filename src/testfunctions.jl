@@ -1,6 +1,11 @@
+export dipole_pocklington
 # This file includes some testing functions
 
 # ----------------------------------- Univariate test functions ----------------------------------- #
+function dipole_pocklington(zp, z, ra=0.005, k=2π)
+    R = sqrt.(ra^2 .+ (z .- zp).^2)
+    exp.(-im*k .*R ) .*  ((1 .+ im*k .*R) .* (2 .* R.^2 .- 3*ra^2) .+ (k*ra .*R).^2) ./ (4π .*R.^5)
+end
 
 parabol(x) = 1 - (2x - 1)^2
 

@@ -1,4 +1,5 @@
 using FractalTools
+using Plots
 
 # An example of one dimensional ifs
 A1 = reshape([1/2],1,1)
@@ -14,8 +15,24 @@ ifs1 = IFS(w)
 ifs1.ws
 ifs1.probs
 
-# An example of two dimensional ifs
+# An example of atr with allocated
+initset = [[0.1]]
+atr = attractor(ifs1, initset; alg=RandAlg(), numiter=100,allocated=true) 
+attrset = vcat(atr.set...)
+t = ones(length(attrset))
+scatter(t, attrset)
 
+
+# An example of atr with Channel
+atr = attractor(ifs1, initset; alg=RandAlg(), numiter=100, allocated=false) 
+collect(atr.set)
+
+# An example of atr with randalg_sequential_generator
+generator = randalg_sequential_generator(ifs1.ws, ifs1.probs)
+take!(generator)
+
+
+# An example of two dimensional ifs
 A = [1/2 0;0 1/2]
 b1 = [0; 0] 
 b2 = [0; 1/2] 
