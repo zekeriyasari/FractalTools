@@ -66,10 +66,10 @@ IFS(ws) = (n = length(ws); IFS(ws, 1  / n * ones(n)))
 Conctructs an IFS for Sierpinski triangle.
 """
 Sierpinski() = IFS([
-    Transformation([0.5 0.0; 0. 0.5], [1.; 1.]),
-    Transformation([0.5 0.0; 0. 0.5], [1.; 50.]),
-    Transformation([0.5 0.0; 0. 0.5], [50.; 50.])
-    ], [0.33, 0.33, 0.34])
+    Transformation([0.5 0.0; 0. 0.5], [0; 0]),
+    Transformation([0.5 0.0; 0. 0.5], [0; 1/2.]),
+    Transformation([0.5 0.0; 0. 0.5], [1/2.; 1/2.])
+    ], [1/3., 1/3., 1/3.])
 
 """
     $SIGNATURES
@@ -285,7 +285,7 @@ function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
     end 
 end
 
-function randalg_sequential_for_generator(ch::AbstractChannel, ws, probs, xinit=nothing; num_iter=nothing, chunk_size=1024 * 2, ϵ = 1e-8)
+function randalg_sequential_for_generator(ch::AbstractChannel, ws, probs, xinit=nothing; num_iter=nothing, chunk_size=10, ϵ = 1e-8)
     # Compute initial set with a single point.
     if xinit === nothing
         n = size(ws[1].b)[1]

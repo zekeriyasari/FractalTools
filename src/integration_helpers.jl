@@ -3,9 +3,16 @@
 using LinearAlgebra
 export is_in_Ball, heaviside, interval
 
-function is_in_Ball(x, x0, ϵ, norm_func = norm, args...)
-    return norm_func.(x - x0, args...) < ϵ
+function is_in_Ball_v2(x::AbstractVector, x0::AbstractVector, ϵ, norm_func = norm, args...)
+    return norm_func(x - x0, args...) < ϵ
 end
+# is_in_Ball_v2([0 1 ; 0  0.1], [0; 0.2], 0.05)
+
+# Check norm.()
+
+# function is_in_Ball(x, x0, ϵ, norm_func = norm, args...)
+#     return norm_func.(x - x0, args...) < ϵ
+# end
 
 function heaviside(t)
     0.5 .* (sign.(t) .+ 1)
