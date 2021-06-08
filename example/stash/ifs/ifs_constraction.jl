@@ -1,26 +1,40 @@
 using FractalTools
 using Plots
 
-# An example of one dimensional ifs
-A1 = reshape([1/2],1,1)
-b1 = [0]
-A2 = reshape([1/2],1,1)
-b2 = [1/2]
+function example_attractor_of_ifs(N_iter)
+    # An example of one dimensional ifs
+    A1 = reshape([1/2],1,1)
+    b1 = [0]
+    A2 = reshape([1/2],1,1)
+    b2 = [1/2]
 
-w1 = Transformation(A1,b1)
-w2 = Transformation(A2,b2)
+    w1 = Transformation(A1,b1)
+    w2 = Transformation(A2,b2)
 
-w = [w1, w2]
-ifs1 = IFS(w)
-ifs1.ws
-ifs1.probs
+    w = [w1, w2]
+    ifs = IFS(w)
+    initset = [[0.1]]
+    atr = attractor(ifs, initset; alg=RandAlg(), numiter=N_iter,allocated=true) 
+    attrset = vcat(atr.set...)
+    t = ones(length(attrset))
+    return atr, attrset, t
+end
 
-# An example of atr with allocated
-initset = [[0.1]]
-atr = attractor(ifs1, initset; alg=RandAlg(), numiter=100,allocated=true) 
-attrset = vcat(atr.set...)
-t = ones(length(attrset))
-scatter(t, attrset)
+atr, attrset, t = example_attractor_of_ifs(10)
+p1 = scatter(t, attrset, title="Attractor of the IFS", label="Attractor Points", markersize = 4)
+
+atr, attrset, t = example_attractor_of_ifs(100)
+p2 = scatter(t, attrset, title="Attractor of the IFS", label="Attractor Points", markersize = 4)
+
+atr, attrset, t = example_attractor_of_ifs(10000)
+p3 = scatter(t, attrset, title="Attractor of the IFS", label="Attractor Points", markersize = 4)
+
+
+plot(p1, p2, p3, layout=(1,3))
+xlabel!("x")
+ylabel!("z")
+xlims!((0.9,1.1))
+# savefig("myplot.png")
 
 
 # An example of atr with Channel
@@ -48,6 +62,7 @@ w = [w1, w2, w3, w4]
 ifs2 = IFS(w)
 ifs2.ws
 ifs2.probs
+
 
 # An example of different probabilities
 
