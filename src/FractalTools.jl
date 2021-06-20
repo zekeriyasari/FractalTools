@@ -27,7 +27,8 @@ include("ifs.jl")
 include("interpolation.jl")
 include("integration.jl")
 include("integration_helpers.jl")
-include("elton_integral.jl")
+include("elton_integral_1D.jl")
+include("elton_integral_2D.jl")
 
 
 

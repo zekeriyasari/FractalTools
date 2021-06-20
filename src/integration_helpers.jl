@@ -1,18 +1,20 @@
 # using FractalAntennaTools
 # using FractalTools
 using LinearAlgebra
-export is_in_Ball, heaviside, interval
+export is_in_Ball, is_in_Ball_2D, heaviside, interval
 
-function is_in_Ball_v2(x::AbstractVector, x0::AbstractVector, ϵ, norm_func = norm, args...)
-    return norm_func(x - x0, args...) < ϵ
+function is_in_Ball_2D(x, x0, ϵ, norm_func = norm, args...)
+    n =  norm_func.(x .- x0, args...) .<= ϵ
+    result = sum(n, dims=1) .== size(x0,1)
+    return result
 end
-# is_in_Ball_v2([0 1 ; 0  0.1], [0; 0.2], 0.05)
 
+# # is_in_Ball_v2([0 1 ; 0  0.1], [0; 0.2], 0.05)
 # Check norm.()
 
-# function is_in_Ball(x, x0, ϵ, norm_func = norm, args...)
-#     return norm_func.(x - x0, args...) < ϵ
-# end
+function is_in_Ball(x, x0, ϵ, norm_func = norm, args...)
+    return norm_func.(x - x0, args...) < ϵ
+end
 
 function heaviside(t)
     0.5 .* (sign.(t) .+ 1)

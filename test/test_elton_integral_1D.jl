@@ -31,9 +31,9 @@ function mean(x)
     sum(x) / length(x)
 end
 
-# elton_integral(deneme, indicator_measure_1D, generator,(1,), (0.5, 0.25), 1e-11, 1e7)
+elton_integral_1D(deneme, indicator_measure_1D, generator,(1,), (0.5, 0.25), 1e-11, 1e7)
 
-elton_integral(deneme2, indicator_measure_1D, generator,(2,), (0.6,0.2), 1e-11, 1e7)
+elton_integral_1D(deneme2, indicator_measure_1D, generator,(2,), (0.6,0.2), 1e-11, 1e7)
 
 
 
