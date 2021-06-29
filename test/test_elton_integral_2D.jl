@@ -2,7 +2,8 @@ using FractalTools
 using Debugger
 
 ifs = Sierpinski() 
-generator = randalg_sequential_generator(ifs.ws, ifs.probs)
+generator = ifs.generator
+# generator = randalg_sequential_generator(ifs.ws, ifs.probs)
 
 function indicator_measure_2D(x, x0, ϵ)
     return (1/3) * is_in_Ball_2D(x,x0,ϵ) 
