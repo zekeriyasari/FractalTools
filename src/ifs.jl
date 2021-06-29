@@ -46,19 +46,22 @@ Iterated fucntion sytem (IFS)
 
     $(TYPEDFIELDS)
 """
-struct IFS{T1<:AbstractVector{<:Transformation}, T2<:AbstractVector{<:Real}}
+struct IFS{T1<:AbstractVector{<:Transformation}, T2<:AbstractVector{<:Real},T3}
     "Vector of transformations of IFS"
     ws::T1 
     "Vector of probabilities of IFS"
     probs::T2
+    "generator of the ifs"
+    generator::T3
 end
 
-function IFS(ws::T1, probs::T2) where {T1, T2} 
+function IFS(ws::T1, probs::T2, args...) where {T1, T2} 
     # Note: For the floating point numbers, aproximation(≈), instead of exact equal (==), should be considered
     sum(probs) ≈ 1 || throw(ArgumentError("Sum of probabilities must be 1."))
-    new{T1, T2}(ws, probs) 
+    generator = randalg_sequential_generator(ws, probs, args...)
+    IFS{T1, T2, typeof(generator)}(ws, probs, generator)
 end
-IFS(ws) = (n = length(ws); IFS(ws, 1  / n * ones(n))) 
+IFS(ws,args...) = (n = length(ws); IFS(ws, 1  / n * ones(n), args...))
 
 """ 
     $SIGNATURES
@@ -285,7 +288,7 @@ function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
     end 
 end
 
-function randalg_sequential_for_generator(ch::AbstractChannel, ws, probs, xinit=nothing; num_iter=nothing, chunk_size=10, ϵ = 1e-8)
+function _randalg_sequential_generator(ch::AbstractChannel, ws, probs, xinit=nothing; num_iter=nothing, chunk_size=10, ϵ = 1e-8)
     # Compute initial set with a single point.
     if xinit === nothing
         n = size(ws[1].b)[1]
@@ -328,7 +331,7 @@ end
 
 function randalg_sequential_generator(ws, probs, args...)
     ch = Channel(0)
-    task = @async randalg_sequential_for_generator(ch, ws, probs, args...)
+    task = @async _randalg_sequential_generator(ch, ws, probs, args...)
     bind(ch, task)
     ch
 end

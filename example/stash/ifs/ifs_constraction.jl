@@ -40,10 +40,10 @@ xlims!((0.9,1.1))
 # An example of atr with Channel
 atr = attractor(ifs1, initset; alg=RandAlg(), numiter=100, allocated=false) 
 collect(atr.set)
-
+take!(atr.generator)
 # An example of atr with randalg_sequential_generator
-generator = randalg_sequential_generator(ifs1.ws, ifs1.probs)
-take!(generator)
+# generator = randalg_sequential_generator(ifs1.ws, ifs1.probs)
+# take!(generator)
 
 
 # An example of two dimensional ifs
