@@ -1,5 +1,5 @@
 using FractalTools
-using Plots; plotlyjs()
+using Plots 
 using Cubature 
 
 # Definitions 
@@ -25,7 +25,7 @@ hfrac(tk) = integrate(ti:ts:tk, f.(ti:ts:tk), d=0.01)
 hhiddenfrac(tk) = integrate(ti:ts:tk, f.(ti:ts:tk), g.(ti:ts:tk))
 
 # Plots 
-td = ts : 0.01 * ts : tf 
+td = 0 : 0.01 * ts : tf 
 plot(td, f.(td), label="f")
 plot!(td, hquad.(td), label="intfquad")
 plot!(td, hfrac.(td), label="intffrac")

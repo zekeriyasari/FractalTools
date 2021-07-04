@@ -27,7 +27,8 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::Interp1D
     x  = getindex.(pts, 1) 
     (a11, a21, _, a22), (b1, b2) = extract(transforms)
 
-    J   = abs.(a11)
+    # J   = abs.(a11)  # Taking abs is not true, |⋅| denotes determinant, not abs 
+    J   = a11
     K1  = (x[end]^2 - x[1]^2) / 2 
     K2  = x[end] - x[1]
     
@@ -41,6 +42,7 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp1
     x = getindex.(pts, 1)
     (a11, a21, a31, _, a22, a32, _, a23, a33), (b1, b2, b3) = extract(transforms)
 
+    # J   = abs.(a11) # Taking abs is not true, |⋅| denotes determinant, not abs 
     J   = abs.(a11)
     K1  = (x[end]^2 - x[1]^2) / 2 
     K2  = (x[end] - x[1])
@@ -62,12 +64,14 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::Interp2D
     k11 = x2 - x1;      k12 = x3 - x1;      l1 = x1 
     k21 = y2 - y1;      k22 = y3 - y1;      l2 = y1
     
-    JT = abs(k11 * k22 - k21 * k12)
+    # JT = abs(k11 * k22 - k21 * k12) # Taking abs is not true, |⋅| denotes determinant, not abs 
+    JT = k11 * k22 - k21 * k12
     Δ1 = k11 + k12 + 3 * l1
     Δ2 = k21 + k22 + 3 * l2
 
     (a11, a21, a31, a12, a22, a32, _, _, a33), (b1, b2, b3) = extract(transforms)
-    JL = abs.(a11 .* a22 - a21 .* a12)
+    # JL = abs.(a11 .* a22 - a21 .* a12) # Taking abs is not true, |⋅| denotes determinant, not abs 
+    JL = a11 .* a22 - a21 .* a12
 
     num = JT / 6 * sum(JL .* (a31 * Δ1 + a32 * Δ2 + 3 * b3))
     denum = 1 - sum(JL .* a33)
@@ -80,12 +84,14 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp2
     k11 = x2 - x1;      k12 = x3 - x1;      l1 = x1 
     k21 = y2 - y1;      k22 = y3 - y1;      l2 = y1
     
-    JT = abs(k11 * k22 - k21 * k12)
+    # JT = abs(k11 * k22 - k21 * k12) # Taking abs is not true, |⋅| denotes determinant, not abs 
+    JT = k11 * k22 - k21 * k12
     Δ1 = k11 + k12 + 3 * l1
     Δ2 = k21 + k22 + 3 * l2
 
     (a11, a21, a31, a41, a12, a22, a32, a42, _, _, a33, a43, _, _, a34, a44), (b1, b2, b3, b4) = extract(transforms)
-    JL = abs.(a11 .* a22 - a21 .* a12)
+    # JL = abs.(a11 .* a22 - a21 .* a12) # Taking abs is not true, |⋅| denotes determinant, not abs 
+    JL = a11 .* a22 - a21 .* a12
 
     W11 = sum(a33 .* JL);    W12 = sum(a34 .* JL);    Λ1  = JT / 6 * sum((a31 * Δ1 + a32 * Δ2 + 3 * b3) .* JL);
     W21 = sum(a43 .* JL);    W22 = sum(a44 .* JL);    Λ2  = JT / 6 * sum((a41 * Δ1 + a42 * Δ2 + 3 * b4) .* JL);
