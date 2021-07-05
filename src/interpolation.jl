@@ -119,7 +119,7 @@ end
 Two dimensional hidden fractal interpolation. IFS is defined as
 ```math 
     w_n(x, y) = \\begin{bmatrix} 
-        a_{11, n}   & 0             & 0             & 0         \\
+        a_{11, n}   & a_{11, n}     & 0             & 0         \\
         a_{21, n}   & a_{22, n}     & 0             & 0         \\ 
         a_{31, n}   & a_{32, n}     & a_{33, n}     & a_{34, n} \\ 
         a_{41, n}   & a_{42, n}     & a_{43, n}     & a_{44, n} \\ 
