@@ -20,7 +20,7 @@ tripts = lift(tpnt) do val
 end 
 
 # Plot tesselation 
-fig = Figure(resolution=(500, 500), scale_plot = false, camera = AbstractPlotting.campixel!)
+fig = Figure(resolution=(500, 500), scale_plot = false, camera = Makie.campixel!)
 ax = fig[1, 1] =  Axis(fig) 
 mesh!(ax, msh, color=:lightblue)
 wireframe!(ax, msh, color=:black)
