@@ -3,11 +3,13 @@
 using LinearAlgebra
 export is_in_Ball, is_in_Ball_2D, heaviside, interval
 
-function is_in_Ball_2D(x, x0, ϵ, norm_func = norm, args...)
-    n =  norm_func.(x .- x0, args...) .<= ϵ
-    result = sum(n, dims=1) .== size(x0,1)
-    return result
+
+function is_in_Ball(x, x0, ϵ, norm_func = norm, args...)
+    norm_func.(eachcol(x .- x0), args...) .<= ϵ
 end
+
+
+
 
 # # is_in_Ball_v2([0 1 ; 0  0.1], [0; 0.2], 0.05)
 # Check norm.()
