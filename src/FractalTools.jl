@@ -8,8 +8,8 @@ using GeometryBasics
 using Clustering
 using StaticArrays
 
-import Makie
-import Makie: @recipe
+using Makie
+import Makie: plot!, convert_arguments
 import GeometryBasics: Ngon
 import Base: show, display
 import StatsBase: sample, Weights
