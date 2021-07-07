@@ -1,6 +1,6 @@
 # This file includes methods for data generation. 
 
-export getdata, getpoint
+export getdata, getpoint, uniformdomain
 
 """
     getdata(f, vtx, npts) 
@@ -57,6 +57,9 @@ function getpoint(line::Line{1, T}) where {T}
     pnt = p0 + (p1 - p0) * rand(T)
     Point(pnt)
 end 
+
+uniformdomain(n::Int, T::Type{<:Real}=Float64, p0::AbstractVector{<:Real}=zeros(T, 2), r::Real=1.) =
+    [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π] |> ngon 
 
 isvalidpoint(pnt::AbstractPoint, tess) = tess.find_simplex(pnt)[1] ≥ 0 && pnt !== Point(NaN, NaN)
 

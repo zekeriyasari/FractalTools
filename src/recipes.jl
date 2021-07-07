@@ -1,6 +1,6 @@
 # This file includes plot recipes for 
 
-export trisurf
+export trisurf, topoint, tovector
 
 # Configurations of Trisurf recipe 
 @recipe(Trisurf, msh) do scene 
@@ -50,4 +50,14 @@ function convert_arguments(plt::Type{<:Trisurf},
                            pnts1d::AbstractVector{<:Point1}) where {T}
     convert_arguments(plt, [Point(pnt2[1], pnt2[2], pnt1[1]) for (pnt2, pnt1) in zip(pnts2d, pnts1d)])
 end 
+
+# Fallback method. If args is a vector (for example, a vector of reals), convert the it to a vector of points
+convert_arguments(plt::Type{<:Trisurf}, args::AbstractVector...) = convert_arguments(plt, map(arg -> topoint.(arg), args)...)
+
+topoint(pnt::AbstractPoint) = pnt
+topoint(vect::AbstractVector{<:Real}) = Point(vect...)
+topoint(vect::Real) = Point(vect)
+
+tovector(pnt::AbstractPoint) = [pnt...]
+tovector(vect::AbstractVector{<:Real}) = vect
 
