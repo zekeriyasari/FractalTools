@@ -1,6 +1,6 @@
 # This file includes plot recipes for 
 
-export trisurf, topoint, tovector
+export trisurf, topoint, tovector, tomesh 
 
 # Configurations of Trisurf recipe 
 @recipe(Trisurf, msh) do scene 
@@ -31,33 +31,12 @@ end
 # We convert arguments of `trisurf` function. We add a couple of methods of `trisurf` function
 # Note: Always a tuple is returned from convert_arguments 
 
-function convert_arguments(::Type{<:Trisurf}, msh2::GeometryBasics.Mesh, f)
+convert_arguments(::Type{<:Trisurf}, pnts::AbstractVector...) where {T} = (tomesh(combine.(pnts...)),)
+
+convert_arguments(plt::Type{<:Trisurf}, pnts::AbstractVector, f::Function) =  
+    convert_arguments(plt, map(pnt -> Point(pnt..., f(pnt...)...), pnts))
+
+convert_arguments(::Type{<:Trisurf}, msh2::GeometryBasics.Mesh, f::Function) = 
     (GeometryBasics.Mesh([Point(pnt..., f(pnt...)) for pnt in msh2.position], faces(msh2)),)
-end 
 
-function convert_arguments(::Type{<:Trisurf}, pnts3d::AbstractVector{<:AbstractPoint{3, T}}) where {T}
-    pnts2d = project(pnts3d)
-    tess = spt.Delaunay(pnts2d) 
-    fcs = [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.simplices .+ 1)]
-    (GeometryBasics.Mesh(pnts3d, fcs),)
-end 
-
-convert_arguments(plt::Type{<:Trisurf}, pnts::AbstractVector{<:AbstractPoint{2,T}}, f::Function) where {T} = 
-    convert_arguments(plt, pnts, map(pnt -> Point(f(pnt...)...), pnts))
-
-function convert_arguments(plt::Type{<:Trisurf}, 
-                           pnts2d::AbstractVector{<:AbstractPoint{2,T}}, 
-                           pnts1d::AbstractVector{<:Point1}) where {T}
-    convert_arguments(plt, [Point(pnt2[1], pnt2[2], pnt1[1]) for (pnt2, pnt1) in zip(pnts2d, pnts1d)])
-end 
-
-# Fallback method. If args is a vector (for example, a vector of reals), convert the it to a vector of points
-convert_arguments(plt::Type{<:Trisurf}, args::AbstractVector...) = convert_arguments(plt, map(arg -> topoint.(arg), args)...)
-
-topoint(pnt::AbstractPoint) = pnt
-topoint(vect::AbstractVector{<:Real}) = Point(vect...)
-topoint(vect::Real) = Point(vect)
-
-tovector(pnt::AbstractPoint) = [pnt...]
-tovector(vect::AbstractVector{<:Real}) = vect
-
+combine(ps...) = vcat([[p...] for p in ps]...)

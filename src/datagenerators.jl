@@ -1,6 +1,6 @@
 # This file includes methods for data generation. 
 
-export getdata, getpoint, uniformdomain
+export getdata, getpoint, uniformdomain, tomesh
 
 """
     getdata(f, vtx, npts) 
@@ -58,8 +58,34 @@ function getpoint(line::Line{1, T}) where {T}
     Point(pnt)
 end 
 
+"""
+    $SIGNATURES
+
+Returns a uniform ngon whose vertex points are centered at `p0` with a radius `r`.
+"""
 uniformdomain(n::Int, T::Type{<:Real}=Float64, p0::AbstractVector{<:Real}=zeros(T, 2), r::Real=1.) =
     [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π] |> ngon 
+
+"""
+    $SIGNATURES
+
+Returns a mesh whose points are `pnts`
+"""
+tomesh(pnts::AbstractVector) = GeometryBasics.Mesh(topoint.(pnts), tofaces(topoint.(pnts)))
+
+tofaces(pnts::AbstractVector{<:AbstractPoint{3,T}}) where {T} = tofaces(project(pnts))
+function tofaces(pnts::AbstractVector{<:AbstractPoint{2,T}}) where {T}
+    tess = spt.Delaunay(pnts) 
+    [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.simplices .+ 1)]
+end 
+
+topoint(pnt::AbstractPoint) = pnt
+topoint(vect::AbstractVector{<:Real}) = Point(vect...)
+topoint(vect::Real) = Point(vect)
+
+tovector(pnt::AbstractPoint) = [pnt...]
+tovector(vect::AbstractVector{<:Real}) = vect
+
 
 isvalidpoint(pnt::AbstractPoint, tess) = tess.find_simplex(pnt)[1] ≥ 0 && pnt !== Point(NaN, NaN)
 

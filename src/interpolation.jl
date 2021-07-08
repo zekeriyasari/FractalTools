@@ -260,10 +260,20 @@ function locate(pnt::AbstractPoint, tess::Tessellation)
     locate(pnt, tess) 
 end 
 
-doubleprecision(pnt::AbstractPoint{N, <:Real}) where {N} = Point(BigFloat.(pnt)...)
-function doubleprecision(pnt::AbstractPoint{N, <:BigFloat}) where {N}
+function doubleprecision(pnt::AbstractPoint{N,<:Real}) where {N}
+    prec = precision(BigFloat)
+    @info "Passing to arbitrary precision arithmetic. BigFloat precision: $prec"
+    Point(BigFloat.(string.(pnt))...)
+end 
+
+function doubleprecision(pnt::AbstractPoint{N,<:BigFloat}) where {N}
     prec = 2 * precision(BigFloat)
-    prec ≤ MAXPREC ? setprecision(prec) : error("Exceeded maximum allowed precision $MAXPREC") 
+    if prec ≤ MAXPREC
+        @info "BigFloat precision: $prec"
+        setprecision(prec)
+    else 
+        error("Exceeded maximum allowed precision $MAXPREC for point $pnt") 
+    end 
     Point(BigFloat.(pnt)...)
 end 
 
