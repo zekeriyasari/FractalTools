@@ -2,30 +2,20 @@
 
 using FractalTools 
 using GeometryBasics
-using Makie 
+using GLMakie
 
 # Construct interpolation data 
-f(x, y) = x^2 + y^2 + 1
-
-# ngon = Triangle(
-#     Point(BigFloat(0.), BigFloat(0.)), 
-#     Point(BigFloat(1.), BigFloat(0.)), 
-#     Point(BigFloat(0.5), BigFloat(1.)))
-
-ngon = Triangle(
-    Point(BigFloat(-5.), BigFloat(-5.)), 
-    Point(BigFloat(5), BigFloat(-5.)), 
-    Point(BigFloat(0), BigFloat(5.)))
-
+ff(x, y) = x^2 + y^2 + 1
+Ω = uniformdomain(8, BigFloat)
 npts = 100
-pts = getdata(f, ngon, npts)
+pts = getdata(ff, Ω, npts)
 
 # Construct test data 
-tpts = getdata(ngon, npts)
+tpts = getdata(Ω, npts)
 ntpts = length(tpts)
 
 # Compute errors 
-fvals = map(pt -> f(pt...), tpts) 
+fvals = map(pt -> ff(pt...), tpts) 
 freevars = 0.001 : 0.001 : 0.025 
 mse = map(freevars) do freevar 
     interp = interpolate(pts, Interp2D(freevar))
