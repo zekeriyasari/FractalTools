@@ -1,5 +1,5 @@
 using FractalTools 
-using Makie 
+using GLMakie 
 
 # Construct a tesselation 
 pts = [0., 0.], [1., 0], [0.5, 1.] 

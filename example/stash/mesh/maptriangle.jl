@@ -1,5 +1,5 @@
 using GeometryBasics 
-using Makie 
+using GLMakie 
 using FractalTools 
 using Random 
 Random.seed!(0)

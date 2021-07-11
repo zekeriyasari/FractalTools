@@ -1,4 +1,4 @@
-using Makie 
+using GLMakie 
 using GeometryBasics
 
 outtrig = Triangle(
@@ -19,7 +19,7 @@ ax2 = Axis(fig[1, 2])
 mesh!(ax1, outtrig.points)
 mesh!(ax2, intrig.points)
 using GeometryBasics 
-using Makie 
+using GLMakie 
 using FractalTools 
 
 using Random 

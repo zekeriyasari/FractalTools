@@ -1,7 +1,7 @@
 # This file includes an example file for 1D interpolation. 
 
 using FractalTools 
-using Makie 
+using GLMakie 
 
 # Generate data 
 xi, dx, xf = 0., 0.1, 10.

@@ -1,5 +1,5 @@
 using PyCall 
-using Makie 
+using GLMakie 
 
 # Construct data 
 spt = pyimport_conda("scipy.spatial", "scipy") 

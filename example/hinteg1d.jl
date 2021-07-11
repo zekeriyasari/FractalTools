@@ -1,7 +1,7 @@
 # This file includes an example file for 1D integrate. 
 
 using FractalTools 
-using Makie 
+using GLMakie 
 
 # Generate data 
 line = [[0.], [10.]]

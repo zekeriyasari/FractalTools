@@ -1,5 +1,5 @@
 using FractalTools 
-using Makie 
+using GLMakie 
 
 # Contruct a tesslation 
 tridln = Node(TriDelaunay([0., 0.], [1., 0], [0.5, 1.], addboundarypoints=false))
