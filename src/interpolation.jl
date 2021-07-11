@@ -224,15 +224,23 @@ getinitf(::Interp2D)   = (x, y) -> 0.
 getinitf(::HInterp2D)  = (x, y) -> [0., 0.] 
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Projects `pts` on a lower dimensioanl space by dropping the `drop` number of indexes. 
 """
-project(pts::PointVector, drop::Int=1)     = [Point(pnt[1 : end - drop]...) for pnt in pts]
-project(pts::PointVector{2}, ::Interp1D)   = project(pts, 1)
-project(pts::PointVector{3}, ::HInterp1D)  = project(pts, 2)
-project(pts::PointVector{3}, ::Interp2D)   = project(pts, 1)
-project(pts::PointVector{4}, ::HInterp2D)  = project(pts, 2)
+project(msh::GeometryBasics.Mesh, drop::Int=1) = GeometryBasics.Mesh(project(msh.position, drop), faces(msh))
+
+"""
+    $TYPEDSIGNATURES
+
+Projects `pts` on a lower dimensioanl space by dropping the `drop` number of indexes. 
+"""
+project(pts::PointVector, drop::Int=1)         = [Point(pnt[1 : end - drop]...) for pnt in pts]
+project(pts::PointVector{2}, ::Interp1D)       = project(pts, 1)
+project(pts::PointVector{3}, ::HInterp1D)      = project(pts, 2)
+project(pts::PointVector{3}, ::Interp2D)       = project(pts, 1)
+project(pts::PointVector{4}, ::HInterp2D)      = project(pts, 2)
+
 
 # We use tessellation to locate the points. The fractal interpolant that is returned by `interpolate` function is a piecewise
 # function. So to calculate the interpolant `interp` at a point `pnt`, we need to locate `pnt` to find the correct subdomain.
@@ -299,11 +307,17 @@ function getboundary(pts::PointVector, method::AbstractSurfaceInterp)
     if length(hull.vertices) == 3   # Triangle  
         Triangle(Point.(pts[hull.vertices .+ 1])...)
     else    # Ngon (tetragon, pentagon, hexagon, etc...)
-        polygon = Ngon(
-            SVector{length(hull.vertices)}(Point.(pts[hull.vertices .+ 1]))
-        )
-        msh = GeometryBasics.mesh(polygon)
-        idx = argmax([area(trig.points) for trig in msh])
+        #= Note
+        For the case, hidden surface fractal interpolation, the points `pts` are in four-dimensional space.  However, 
+        GeometryBasics.mesh requires at most three-dimensional points. Thus, we cannot use the method `GeometryBasics.mesh` 
+        to constuct the mesh for the convex hull point. Instead, we first find the hull points, then construct d-dimensional 
+        mesh (where d = 3 for surface interpolation and d = 4 for hidden surface interpolation. Then, we find index of the 
+        triangle with the largest area  in the interpolation domain (which is to 2-dimensional domain) and we return the 
+        triangle in the d-dimensioanl mesh  
+        =#
+        hpts = Point.(pts[hull.vertices .+ 1])
+        msh = tomesh(hpts)
+        idx = argmax([area(trig.points) for trig in project(msh)])
         msh[idx]
     end 
 end 

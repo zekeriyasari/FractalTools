@@ -2,29 +2,46 @@
 
 using FractalTools 
 using GeometryBasics
-using Makie 
+using GLMakie 
 
 # Generate data 
 f(x, y) = [
     x^2 + y^2 + 1, 
     x^2 - y^2
     ]
-ngon = Triangle(
-    Point(BigFloat(0.), BigFloat(0.)), 
-    Point(BigFloat(1.), BigFloat(0.)), 
-    Point(BigFloat(0.5), BigFloat(1.)))
-npts = 100
-pts = getdata(f, ngon, npts)
-interp = interpolate(pts, HInterp2D(0.01 * ones(2,2)))
+Ω = uniformdomain(4, BigFloat)
+N = 100
+pts = getdata(f, Ω, N)
 
-function err(x, y)
-    fval = f(x, y) 
-    ival = interp(x, y) 
-    map(item -> abs.(item), fval - ival) ./ map(item -> abs.(item), fval) * 100
-end
+# Construct intepolant 
+f̃ = interpolate(pts, HInterp2D(0.01 * ones(2,2)))
 
-tpts = getdata(ngon, npts)
+# Construct test data 
+tpts = getdata(Ω, N)
 
-fig, ax, plt = trisurf(tpts, (x, y) -> f(x, y)[1], meshcolor3=:red)
-trisurf!(ax, tpts, (x, y) -> interp(x, y)[1], meshcolor3=:blue)
-fig, ax, plt = trisurf(tpts, (x, y) -> err(x, y)[1], meshcolor3=:red)
+# Evaluations 
+fvals = map(p -> f(p...) |> first, tpts)
+ivals = map(p -> f̃(p...) |> first, tpts)
+evals = abs.(fvals - ivals) ./ abs.(fvals) * 100
+
+# Plots 
+fig = Figure() 
+ls1 = Axis3(fig[1, 1])
+scatter!(ls1, project(pts))
+wireframe!(ls1, tomesh(project(pts)))
+scatter!(ls1, project(pts, 2))
+wireframe!(ls1, tomesh(project(pts, 2)))
+
+ls2 = Axis3(fig[1, 2])
+trisurf!(ls2, tpts, fvals)
+wireframe!(ls2, tomesh(project(pts, 2)))
+
+ls3 = Axis3(fig[2, 1])
+trisurf!(ls3, tpts, ivals)
+wireframe!(ls3, tomesh(project(pts, 2)))
+
+ls4 = Axis3(fig[2, 2])
+trisurf!(ls4, tpts, evals)
+wireframe!(ls4, tomesh(project(pts, 2)))
+
+fig 

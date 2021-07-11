@@ -73,7 +73,7 @@ Returns a mesh whose points are `pnts`
 """
 tomesh(pnts::AbstractVector) = GeometryBasics.Mesh(topoint.(pnts), tofaces(topoint.(pnts)))
 
-tofaces(pnts::AbstractVector{<:AbstractPoint{3,T}}) where {T} = tofaces(project(pnts))
+tofaces(pnts::AbstractVector{<:AbstractPoint{N,T}}) where {N,T} = tofaces(project(pnts, N - 2))
 function tofaces(pnts::AbstractVector{<:AbstractPoint{2,T}}) where {T}
     tess = spt.Delaunay(pnts) 
     [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.simplices .+ 1)]
