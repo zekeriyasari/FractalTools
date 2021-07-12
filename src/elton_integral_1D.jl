@@ -30,6 +30,7 @@ function elton_integral_1D(func, ind_func, points::Channel, func_params=tuple(),
         filtered_set_of_points = set_of_points[indicator.>0] 
         number_of_points += number_of_indicator
         val =  func.(filtered_set_of_points, func_params...) .* indicator[indicator .> 0]
+        # val =  func.(filtered_set_of_points, func_params...) 
         result = (1 / (number_of_points +1)) * ((old_number_of_points + 1) * old_result + sum(val))
         Δ[mod(k,chunk_size)+1] = abs(result - old_result) 
         k += 1

@@ -23,7 +23,6 @@ function elton_integral(func, ind_func, points::Channel, func_params=tuple(), in
         index_indicator = []
         while number_of_indicator < (chunk_size / 2)
             set_of_points = take!(points)
-        
             indicator = ind_func(set_of_points, ind_params...)
             index_indicator = indicator .> 0
             number_of_indicator = sum(index_indicator)

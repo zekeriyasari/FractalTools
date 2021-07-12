@@ -160,6 +160,7 @@ struct Attractor{T, S, R1, R2}
     numiter::Int
     "Sequential or parallel"
     parallel::Bool
+
 end
 
 """
@@ -320,6 +321,8 @@ function _randalg_sequential_generator(ch::AbstractChannel, ws, probs, xinit=not
     # Compute attractor
     chunk = zeros(n, chunk_size) 
     while true
+        # chunk_size = take!(ch)
+        # chunk_size === NaN && break
         for i = 1 : chunk_size
             trfmi = sample(ws, weights)
             xnew = trfmi(xnew)
@@ -331,6 +334,7 @@ end
 
 function randalg_sequential_generator(ws, probs, args...)
     ch = Channel(0)
+    # ch = Channel{Vector{Float64}}()
     task = @async _randalg_sequential_generator(ch, ws, probs, args...)
     bind(ch, task)
     ch
