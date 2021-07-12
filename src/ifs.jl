@@ -55,14 +55,17 @@ struct IFS{T1<:AbstractVector{<:Transformation}, T2<:AbstractVector{<:Real},T3}
     attractor::T3
 end
 
-function IFS(ws::AbstractVector{<:Transformation}, probs::AbstractVector{<:Real}, args...)  
+# TODO: Document args and kwargs... 
+function IFS(ws::AbstractVector{<:Transformation}, 
+             probs::AbstractVector{<:Real}, 
+             initset::AbstractVector{<:AbstractVector}=[rand(dimension(ws[1]))];
+             kwargs...)  
     # Note: For the floating point numbers, aproximation(≈), instead of exact equal (==), should be considered
     sum(probs) ≈ 1 || throw(ArgumentError("Sum of probabilities must be 1."))
-    initset = [rand(dimension(ws[1]))]
-    attractor = Attractor(ws, probs, initset)
+    attractor = Attractor(ws, probs, initset; kwargs...)
     IFS(ws, probs, attractor)
 end
-IFS(ws,args...) = (n = length(ws); IFS(ws, 1  / n * ones(n), args...))
+IFS(ws, args...) = (n = length(ws); IFS(ws, 1  / n * ones(n), args...))
 
 """ 
     $SIGNATURES
@@ -128,16 +131,23 @@ contfactor(ifs::IFS) = maximum(contfactor.(ifs.ws))
 """
     $TYPEDEF
 
+Abstract algorithm See [`DetAlg`](@ref), [`RandAlg`](@ref)  
+"""
+abstract type AbstractAlgorithm end
+
+"""
+    $TYPEDEF
+
 A type signifying that deterministic algorithm is used when calculating the attractor of and IFS.
 """
-struct DetAlg end
+struct DetAlg <: AbstractAlgorithm end
 
 """
     $TYPEDEF
 
 A type signifying that random algorithm is used when calculating the attractor of and IFS.
 """
-struct RandAlg end
+struct RandAlg <: AbstractAlgorithm end
 
 """
     $TYPEDEF
@@ -148,7 +158,9 @@ Attractor of `IFS` type
 
     $TYPEDFIELDS
 """
-struct Attractor{S, R1, R2}
+mutable struct Attractor{S  <: AbstractAlgorithm, 
+                         R1 <: AbstractVector{<:AbstractVector}, 
+                         R2 <: Union{<:AbstractVector{<:AbstractVector}, AbstractChannel}}
     "Type of algorithm to be used to compute attractor(Options are DetAlg and RandAlg"
     alg::S
     "Initial set of attractor"
@@ -160,9 +172,10 @@ struct Attractor{S, R1, R2}
     "Sequential or parallel"
     parallel::Bool
     "Number of chunk size"
-    chunk_size::Int
+    chunksize::Int
 end
 
+# TODO: Document kwargs...
 """
     $SIGNATURES
 
@@ -184,31 +197,54 @@ Computes the attractor of `ifs`. If `alg` is of type `DetAlg`, the deterministic
 
 * `β::AbstractVector` : Place-dependent probility coefficient. (default to nothing)
 """
-Attractor(ws, probs, initset; alg=DetAlg(), kwargs...) = typeof(alg) == DetAlg ? 
-                                                   detalg(ws, probs, initset; kwargs...) : 
-                                                   randalg(ws, probs,initset; kwargs...)
+function Attractor(ws::AbstractVector{<:Transformation}, 
+                   probs::AbstractVector{<:Real}, 
+                   initset::AbstractVector{<:AbstractVector};
+                   alg=DetAlg(), 
+                   kwargs...) 
+    if typeof(alg) == DetAlg 
+        detalg(ws, probs, initset; kwargs...)
+    else
+        randalg(ws, probs, initset; kwargs...)
+    end 
+end 
 
-function attractor(ws, probs, initset; alg=DetAlg(), kwargs...)
-    @warn "`attractor(ws, probs, initset; alg=DetAlg(), kwargs...)` has been deprecated. Use `Attractor(ws, probs, initset; alg=DetAlg(), kwargs...)` instead"
+function attractor(ws::AbstractVector{<:Tranformation}, 
+                   probs::AbstractVector{<:Real}, 
+                   initset::AbstractVector{<:AbstractVector}; 
+                   alg=DetAlg(), 
+                   kwargs...)
+    msg = "`attractor(ws, probs, initset; alg=DetAlg(), kwargs...)` has been deprecated". 
+    msg *= "Use `Attractor(ws, probs, initset; alg=DetAlg(), kwargs...)` instead"
+    @warn msg 
     Attractor(ws, probs, initset; alg=alg, kwargs...) 
 end
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Computes the attractor of `ifs` with deterministic algorithm.`numiter` is number of iterations. (Defaults to 10). If
 `parallel` is true, attractor is computed via parallel computation.
 """
-function detalg(ws, probs, initset; numiter=10, parallel=false, chunk_size=10)
+function detalg(ws::AbstractVector{<:Transformation}, 
+                probs::AbstractVector{<:Real}, 
+                initset::AbsractVector{<:AbstractVector}; 
+                numiter::Int=10, 
+                parallel::Bool=false, 
+                chunksize::Int=10)
     copiedset = copy(initset)
-    set = parallel ? 
-          detalg_parallel(ws, copiedset, numiter) : 
-          detalg_sequential(ws, copiedset, numiter)
-    Attractor(DetAlg(), initset, set, numiter, parallel, chunk_size)
+    set = if parallel
+        detalg_parallel(ws, copiedset, numiter)
+    else 
+        detalg_sequential(ws, copiedset, numiter)
+    end 
+    Attractor(DetAlg(), initset, set, numiter, parallel, chunksize)
 end
 
 # Computes the attractor of an ifs via deterministic algorithm sequentially. 
-function detalg_sequential(ws, set, numiter)
+function detalg_sequential(ws::AbstractVector{<:Transformation}, 
+                           set::AbstractVector{<:AbstractVector}, 
+                           numiter::Int)
     for i in 1 : numiter
         set = vcat(map(w -> w.(set), ws)...)
     end
@@ -216,7 +252,9 @@ function detalg_sequential(ws, set, numiter)
 end
 
 # Computes the attractor of an ifs via deterministic algorithm in parallel. 
-function detalg_parallel(ws, set, numiter)
+function detalg_parallel(ws::AbstractVector{<:Transformation}, 
+                         set::AbstractVector{<:AbstractVector}, 
+                         numiter::Int)
     loadprocs()
     for i in 1 : numiter
         set = vcat(map(w -> pmap(w, set), ws)...)
@@ -225,77 +263,164 @@ function detalg_parallel(ws, set, numiter)
 end
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Computes the attractor of `ifs` with random algorithm.`numiter` is number of iterations. (Defaults to 100). `numtransient` is
 the number of transient iterations. If `parallel` is true, attractor is computed via parallel computation. If
 `placedependent` is true, the probabilties of the ifs are dependent on the coordinates `x`. This dependency `p(x)` is given
 via the parameters `α` and `β` where p(x) = α x + β.
 """
-function randalg(ws, probs, initset; numiter=100, numtransient=10, parallel=false, placedependent=false, α=nothing, β=nothing, allocated::Bool=false, chunk_size = 10, ϵ::Real=NaN)
+function randalg(ws::AbstractVector{<:Tranformation},           # IFS transformations 
+                 probs::AbstractVector{<:Real},                 # IFS tranformation probabilities 
+                 initset::AbstractVector{<:AbstractVector};     # Initial set to compute attractor 
+                 numiter::Int=100,                              # Maximum iterations number 
+                 posterrorbound::Real=NaN,                      # Posterior error bound
+                 allocated::Bool=false,                         # If true, attractor points are allocated   
+                 chunksize::Int=10,                             # Chunk size when attractor is processed (eg. elton integ.). 
+                 numtransient::Int=10,                          # Number of transient steps before constructing attracttor
+                 parallel::Bool=false,                          # If true, attractor is constructed using parallel computing 
+                 placedependent::Bool=false,                    # If true, place dependent attractor is constructed. 
+                 α=nothing,                                     # Place dependent transformation is in form p(x) = αx + β 
+                 β=nothing)                                     # Place dependent transformation is in form p(x) = αx + β 
     if parallel
+        # FIXME: The order of the argument positions must be checked.
         if placedependent
-            transient = randalg_sequential_pd(ws, copy(initset), numtransient, probs, α, β, allocated)
-            set = randalg_parallel_pd(ws, transient, numiter, probs, α, β, allocated)
+            transient = randalg_sequential_pd(ws, probs, copy(initset), numtransient, α, β, allocated)
+            set = randalg_parallel_pd(ws, probs, transient, numiter, α, β, allocated)
         else
-            transient = randalg_sequential(ws, copy(initset), numtransient, probs, allocated)
-            set = randalg_parallel(ws, transient, numiter, probs, allocated)
+            transient = randalg_sequential(ws, probs, copy(initset), numtransient, allocated)
+            set = randalg_parallel(ws, probs, transient, numiter, allocated)
         end
     else
         if placedependent
-            set = randalg_sequential_pd(ws, copy(initset), numiter, probs, α, β, allocated)
+            set = randalg_sequential_pd(ws, probs, copy(initset), numiter, α, β, allocated)
         else
-            if ϵ === NaN
-                set = randalg_sequential(ws, copy(initset), numiter, probs, allocated)
+            if posterrorbound === NaN
+                set = randalg_sequential(ws, probs, copy(initset), numiter, chunksize, allocated)
             else 
-                set = randalg_sequential(ws, copy(initset), numiter, probs, allocated, ϵ)   
+                set = randalg_sequential(ws, probs, copy(initset), numiter, posterrorbound, chunksize, allocated)   
             end  
         end
     end
-    Attractor(RandAlg(), initset, set, numiter, parallel, chunk_size)
+    Attractor(RandAlg(), initset, set, numiter, parallel, chunksize)
 end
 
-function _randalg_sequential(set::AbstractVector, ws, numiter::Int)
+function randalg_sequential(ws::AbstractVector{<:Tranformation}, 
+                            probs::AbsractVector{<:Real}, 
+                            set::AbstractVector{<:AbstractVector}, 
+                            numiter::Int, 
+                            allocated::Bool=false)
+    if allocated
+        # Compute whole attractor and allocate attractor points. 
+        _randalg_sequential(ws, probs, set, numiter)
+    else
+        # Compute whole attractor and do not allocate attractor points. 
+        channel = Channel(0)
+        task = @async _randalg_sequential(ws, probs, channel, only(set), numiter)
+        bind(channel, task)
+        channel
+    end 
+end
 
+# Compute whole attractor and without allocating attractor points via Channel-Task interface 
+function randalg_sequential(ws::AbstractVector{<:Transformation}, 
+                            probs::AbstractVector{<:Real},
+                            set::AbstractVector{<:AbstractVector},
+                            numiter::Int, 
+                            posterrorbound::Real,
+                            chunksize::Int)
+    channel = Channel(0)
+    task = @async _randalg_sequential(ws, probs, channel, only(set), numiter, posterrorbound, chunksize)
+    bind(channel, task)
+    channel
+end
+
+# Compute whole attractor and allocate attractor points. 
+function _randalg_sequential(ws::AbstractVector{<:Transformation},
+                             probs::AbstractVector{<:Real},
+                             set::AbstractVector{<:AbstractVector}, 
+                             numiter::Int)
     weights = Weights(probs)
     xi = set[end]
     for i = 1 : numiter
         trfmi = sample(ws, weights)
         xi = trfmi(xi)
-        push!(set, xi)
+        push!(set, xi)      # Allocation
     end
-    return set
+    set
 end
 
-# Computes the attractor of an ifs via random algorithm sequentially. 
-function _randalg_sequential(ch::AbstractChannel, xinit, ws, probs, numiter::Int)
+
+# Compute whole attractor and do not allocate attractor points. 
+function _randalg_sequential(ws::AbstractVector{<:Transformation},
+                             probs::AbstractVector{<:Real},
+                             channel::AbstractChannel, 
+                             xinit::AbstractVector{<:Real},
+                             numiter::Int)
     weights = Weights(probs)
-    #TODO: Cancel the numiter, determine the post-error, K(contraction)
     for i = 1 : numiter
         trfmi = sample(ws, weights)
         xnew = trfmi(xinit)
-        put!(ch, xnew)
+        put!(channel, xnew)
         xinit = xnew
     end
-    ch
+    channel
 end
 
-function _randalg_sequential(ch::AbstractChannel, xinit, ws, probs, numiter=nothing, ϵ::Real=1e-8, chunk_size=10)
-    # Compute initial set with a single point.
-    if xinit === nothing
-        n = size(ws[1].b)[1]
-        xinit = rand(n)       
-    else
-        n = size(xinit)[1]
-    end
-    n = size(xinit)[1]
+function _randalg_sequential(ws::AbstractVector{<:Transformation},  
+                             probs::AbstractVector{<:Real},
+                             channel::AbstractChannel, 
+                             xinit::AbstractVector{<:Real}, 
+                             numiter::Int=nothing, 
+                             posterrorbound::Real=1e-8, 
+                             chunksize::Int=10)
+    n = length(xinit)
 
+    # # Compute number of iterations
+    # σ, index = findmax(contfactor.(ws))
+    # if numiter === nothing
+    #     # Compute num_iter with respect to posterrorbound
+    #     x1 = ws[index](xinit)
+    #     _k = (log(posterrorbound) - log(norm(x1 - xinit))) / log(σ) + 1
+    #     k = Int(ceil(_k))
+    # else
+    #     # Assign num_iter directly
+    #     k = numiter
+    # end
+
+    # # Compute transients
+    # weights = Weights(probs)
+    # xnew = xinit
+    # for i = 1 : k
+    #     trfmi = sample(ws, weights)
+    #     xnew = trfmi(xnew)
+    # end
+
+    # Compute attractor
+    chunk = zeros(n, chunksize) 
+    while true
+        # chunksize = take!(channel)
+        # chunksize === NaN && break
+        for i = 1 : chunksize
+            trfmi = sample(ws, weights)
+            xnew = trfmi(xnew)
+            chunk[:,i] = xnew
+        end
+        put!(channel, chunk)
+    end
+end
+
+function transientsteps!(ws::AbstractVector{<:Transformation},
+                         probs::AbstractVector{<:Real}, 
+                         xinit::AbstractVector{<:Real},
+                         numiter::Int, 
+                         posterrorbound::Real) 
     # Compute number of iterations
     σ, index = findmax(contfactor.(ws))
     if numiter === nothing
-        # Compute num_iter with respect to ϵ
+        # Compute num_iter with respect to posterrorbound
         x1 = ws[index](xinit)
-        _k = (log(ϵ) - log(norm(x1 - xinit))) / log(σ) + 1
+        _k = (log(posterrorbound) - log(norm(x1 - xinit))) / log(σ) + 1
         k = Int(ceil(_k))
     else
         # Assign num_iter directly
@@ -309,42 +434,7 @@ function _randalg_sequential(ch::AbstractChannel, xinit, ws, probs, numiter=noth
         trfmi = sample(ws, weights)
         xnew = trfmi(xnew)
     end
-
-    # Compute attractor
-    chunk = zeros(n, chunk_size) 
-    while true
-        # chunk_size = take!(ch)
-        # chunk_size === NaN && break
-        for i = 1 : chunk_size
-            trfmi = sample(ws, weights)
-            xnew = trfmi(xnew)
-            chunk[:,i] = xnew
-        end
-        put!(ch, chunk)
-    end
-end
-
-function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
-    if allocated
-        _randalg_sequential(set, ws, numiter, probs)
-    else
-        # NOTE: The set is assumed to have just a single initial point. If the set consists of more element, then we need a fix.
-        ch = Channel(0)
-        task = @async _randalg_sequential(ch, only(set), ws, numiter, probs)
-        # task = @async _randalg_sequential(ch, ws, probs)
-        bind(ch, task)
-        ch
-    end 
-end
-
-function randalg_sequential(ws, set, numiter, probs, ϵ::Real)
-    ch = Channel(0)
-    # ch = Channel{Vector{Float64}}()
-    task = @async _randalg_sequential(ch, ws, probs, args...)
-    bind(ch, task)
-    ch
-end
-
+end 
 
 # Computes the attractor of an ifs via random algorithm sequentially with placedependent probabilties.
 function randalg_sequential_pd(ws, set, numiter, probs, α, β, allocated::Bool=false)
