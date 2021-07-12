@@ -51,15 +51,16 @@ struct IFS{T1<:AbstractVector{<:Transformation}, T2<:AbstractVector{<:Real},T3}
     ws::T1 
     "Vector of probabilities of IFS"
     probs::T2
-    "generator of the ifs"
-    generator::T3
+    "Attractor of the ifs"
+    attractor::T3
 end
 
-function IFS(ws::T1, probs::T2, args...) where {T1, T2} 
+function IFS(ws::AbstractVector{<:Transformation}, probs::AbstractVector{<:Real}, args...)  
     # Note: For the floating point numbers, aproximation(≈), instead of exact equal (==), should be considered
     sum(probs) ≈ 1 || throw(ArgumentError("Sum of probabilities must be 1."))
-    generator = randalg_sequential_generator(ws, probs, args...)
-    IFS{T1, T2, typeof(generator)}(ws, probs, generator)
+    initset = [rand(dimension(ws[1]))]
+    attractor = Attractor(ws, probs, initset)
+    IFS(ws, probs, attractor)
 end
 IFS(ws,args...) = (n = length(ws); IFS(ws, 1  / n * ones(n), args...))
 
@@ -147,9 +148,7 @@ Attractor of `IFS` type
 
     $TYPEDFIELDS
 """
-struct Attractor{T, S, R1, R2}
-    "IFS of Attractor"
-    ifs::T
+struct Attractor{S, R1, R2}
     "Type of algorithm to be used to compute attractor(Options are DetAlg and RandAlg"
     alg::S
     "Initial set of attractor"
@@ -160,7 +159,8 @@ struct Attractor{T, S, R1, R2}
     numiter::Int
     "Sequential or parallel"
     parallel::Bool
-
+    "Number of chunk size"
+    chunk_size::Int
 end
 
 """
@@ -184,9 +184,14 @@ Computes the attractor of `ifs`. If `alg` is of type `DetAlg`, the deterministic
 
 * `β::AbstractVector` : Place-dependent probility coefficient. (default to nothing)
 """
-attractor(ifs, initset; alg=DetAlg(), kwargs...) = typeof(alg) == DetAlg ? 
-                                                   detalg(ifs,initset; kwargs...) : 
-                                                   randalg(ifs,initset; kwargs...)
+Attractor(ws, probs, initset; alg=DetAlg(), kwargs...) = typeof(alg) == DetAlg ? 
+                                                   detalg(ws, probs, initset; kwargs...) : 
+                                                   randalg(ws, probs,initset; kwargs...)
+
+function attractor(ws, probs, initset; alg=DetAlg(), kwargs...)
+    @warn "`attractor(ws, probs, initset; alg=DetAlg(), kwargs...)` has been deprecated. Use `Attractor(ws, probs, initset; alg=DetAlg(), kwargs...)` instead"
+    Attractor(ws, probs, initset; alg=alg, kwargs...) 
+end
 
 """
     $SIGNATURES
@@ -194,12 +199,12 @@ attractor(ifs, initset; alg=DetAlg(), kwargs...) = typeof(alg) == DetAlg ?
 Computes the attractor of `ifs` with deterministic algorithm.`numiter` is number of iterations. (Defaults to 10). If
 `parallel` is true, attractor is computed via parallel computation.
 """
-function detalg(ifs, initset; numiter=10, parallel=false)
+function detalg(ws, probs, initset; numiter=10, parallel=false, chunk_size=10)
     copiedset = copy(initset)
     set = parallel ? 
-          detalg_parallel(ifs.ws, copiedset, numiter) : 
-          detalg_sequential(ifs.ws, copiedset, numiter)
-    Attractor(ifs, DetAlg(), initset, set, numiter, parallel)
+          detalg_parallel(ws, copiedset, numiter) : 
+          detalg_sequential(ws, copiedset, numiter)
+    Attractor(DetAlg(), initset, set, numiter, parallel, chunk_size)
 end
 
 # Computes the attractor of an ifs via deterministic algorithm sequentially. 
@@ -227,9 +232,7 @@ the number of transient iterations. If `parallel` is true, attractor is computed
 `placedependent` is true, the probabilties of the ifs are dependent on the coordinates `x`. This dependency `p(x)` is given
 via the parameters `α` and `β` where p(x) = α x + β.
 """
-function randalg(ifs, initset; numiter=100, numtransient=10, parallel=false, placedependent=false, α=nothing, β=nothing, allocated::Bool=false)
-    ws = ifs.ws
-    probs = ifs.probs
+function randalg(ws, probs, initset; numiter=100, numtransient=10, parallel=false, placedependent=false, α=nothing, β=nothing, allocated::Bool=false, chunk_size = 10, ϵ::Real=NaN)
     if parallel
         if placedependent
             transient = randalg_sequential_pd(ws, copy(initset), numtransient, probs, α, β, allocated)
@@ -242,15 +245,18 @@ function randalg(ifs, initset; numiter=100, numtransient=10, parallel=false, pla
         if placedependent
             set = randalg_sequential_pd(ws, copy(initset), numiter, probs, α, β, allocated)
         else
-            set = randalg_sequential(ws, copy(initset), numiter, probs, allocated)
+            if ϵ === NaN
+                set = randalg_sequential(ws, copy(initset), numiter, probs, allocated)
+            else 
+                set = randalg_sequential(ws, copy(initset), numiter, probs, allocated, ϵ)   
+            end  
         end
     end
-    Attractor(ifs, RandAlg(), initset, set, numiter, parallel)
+    Attractor(RandAlg(), initset, set, numiter, parallel, chunk_size)
 end
 
+function _randalg_sequential(set::AbstractVector, ws, numiter::Int)
 
-
-function _randalg_sequential(set::AbstractVector, ws, numiter, probs)
     weights = Weights(probs)
     xi = set[end]
     for i = 1 : numiter
@@ -261,10 +267,8 @@ function _randalg_sequential(set::AbstractVector, ws, numiter, probs)
     return set
 end
 
-
-
 # Computes the attractor of an ifs via random algorithm sequentially. 
-function _randalg_sequential(ch::AbstractChannel, xinit, ws, numiter, probs)
+function _randalg_sequential(ch::AbstractChannel, xinit, ws, probs, numiter::Int)
     weights = Weights(probs)
     #TODO: Cancel the numiter, determine the post-error, K(contraction)
     for i = 1 : numiter
@@ -276,20 +280,7 @@ function _randalg_sequential(ch::AbstractChannel, xinit, ws, numiter, probs)
     ch
 end
 
-function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
-    if allocated
-        _randalg_sequential(set, ws, numiter, probs)
-    else 
-        # NOTE: The set is assumed to have just a single initial point. If the set consists of more element, then we need a fix.
-        ch = Channel(0)
-        task = @async _randalg_sequential(ch, only(set), ws, numiter, probs)
-        # task = @async _randalg_sequential(ch, ws, probs)
-        bind(ch, task)
-        ch
-    end 
-end
-
-function _randalg_sequential_generator(ch::AbstractChannel, ws, probs, xinit=nothing; num_iter=nothing, chunk_size=10, ϵ = 1e-8)
+function _randalg_sequential(ch::AbstractChannel, xinit, ws, probs, numiter=nothing, ϵ::Real=1e-8, chunk_size=10)
     # Compute initial set with a single point.
     if xinit === nothing
         n = size(ws[1].b)[1]
@@ -297,17 +288,18 @@ function _randalg_sequential_generator(ch::AbstractChannel, ws, probs, xinit=not
     else
         n = size(xinit)[1]
     end
+    n = size(xinit)[1]
 
     # Compute number of iterations
     σ, index = findmax(contfactor.(ws))
-    if num_iter === nothing
+    if numiter === nothing
         # Compute num_iter with respect to ϵ
         x1 = ws[index](xinit)
         _k = (log(ϵ) - log(norm(x1 - xinit))) / log(σ) + 1
         k = Int(ceil(_k))
     else
         # Assign num_iter directly
-        k = num_iter
+        k = numiter
     end
 
     # Compute transients
@@ -332,24 +324,26 @@ function _randalg_sequential_generator(ch::AbstractChannel, ws, probs, xinit=not
     end
 end
 
-function randalg_sequential_generator(ws, probs, args...)
+function randalg_sequential(ws, set, numiter, probs, allocated::Bool=false)
+    if allocated
+        _randalg_sequential(set, ws, numiter, probs)
+    else
+        # NOTE: The set is assumed to have just a single initial point. If the set consists of more element, then we need a fix.
+        ch = Channel(0)
+        task = @async _randalg_sequential(ch, only(set), ws, numiter, probs)
+        # task = @async _randalg_sequential(ch, ws, probs)
+        bind(ch, task)
+        ch
+    end 
+end
+
+function randalg_sequential(ws, set, numiter, probs, ϵ::Real)
     ch = Channel(0)
     # ch = Channel{Vector{Float64}}()
-    task = @async _randalg_sequential_generator(ch, ws, probs, args...)
+    task = @async _randalg_sequential(ch, ws, probs, args...)
     bind(ch, task)
     ch
 end
-
-#TODO: Cancel the numiter, determine the post-error, K(contraction), choose num_iter from consraction factor
-
-# function estimate_contraction_factor(ws)
-#     σ = zeros(lenght(ws))
-#     for i, transformation in ws
-#         σ[i] = norm(transformation.A, inf)
-#     end
-#     # TODO : Returns nothing
-#     σ
-# end
 
 
 # Computes the attractor of an ifs via random algorithm sequentially with placedependent probabilties.
