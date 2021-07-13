@@ -25,7 +25,7 @@ function elton(f, Ω, n, chunksize)
     for i in 1 : n 
         chunk = take!(Ω) 
         total += sum(map(pnt -> f(pnt...), chunk))
-        npts  += length(npts)
+        npts  += length(chunk)
     end 
     total / npts
 end

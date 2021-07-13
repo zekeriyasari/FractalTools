@@ -12,7 +12,7 @@ f(x, y) = x^2 + y^2
 cubaval = hcubature(p -> f(p...), [0., 0.], [1., 1.]) |> first 
 
 # Compute integral using elton 
-eltonval = elton(f, Ω, 100)
+eltonval = elton(f, Ω, 100, 1000)
 
 # Absolute error 
 relerr = abs(cubaval - eltonval) / abs(cubaval) * 100
