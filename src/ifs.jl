@@ -2,6 +2,8 @@
 
 export  Transformation, IFS, Attractor, Tree, Square, Fern, Sierpinski, DetAlg, RandAlg, dimension, contfactor 
 
+#--- ------------------------------------- Transformation ------------------------------------------------ # 
+
 struct Transformation{T1, T2} 
     A::T1 
     b::T2 
@@ -11,6 +13,8 @@ end
 dimension(w::Transformation) = size(w.A, 1)
 contfactor(w::Transformation, p::Int=2) = norm(w.A, p)
 
+#--- -------------------------------------------- IFS ---------------------------------------------------- # 
+
 struct IFS{T1, T2} 
     ws::T1 
     probs::T2 
@@ -19,6 +23,7 @@ struct IFS{T1, T2}
         new{T1, T2}(ws, probs)
     end
 end 
+
 IFS(ws) = (n = length(ws); IFS(ws, ones(n) / n))
 
 dimension(ifs::IFS) = dimension(ifs.ws[1])
@@ -31,10 +36,10 @@ Sierpinski() = IFS([
     ], [1/3., 1/3., 1/3.])
 
 Square() = IFS([
-    Transformation([0.5 0.0; 0. 0.5], [1.; 1.]),
-    Transformation([0.5 0.0; 0. 0.5], [50.; 1.]),
-    Transformation([0.5 0.0; 0. 0.5], [1.; 50.]),
-    Transformation([0.5 0.0; 0. 0.5], [50.; 50.])
+    Transformation([0.5 0.0; 0. 0.5], [0., 0.]),
+    Transformation([0.5 0.0; 0. 0.5], [0.5, 0.]),
+    Transformation([0.5 0.0; 0. 0.5], [0., 0.5]),
+    Transformation([0.5 0.0; 0. 0.5], [0.5, 0.5])
     ], [0.25, 0.25, 0.25, 0.25])
 
 Fern() = IFS([
@@ -51,6 +56,8 @@ Tree() = IFS([
     Transformation([0.1 0; 0 0.1], [0.; 0.2])
     ], [0.05, 0.40, 0.40, 0.15])
 
+#--- ------------------------------------- Attracttor ------------------------------------------------ # 
+
 abstract type Algorithm end
 struct DetAlg <: Algorithm end
 struct RandAlg <: Algorithm end
@@ -61,6 +68,7 @@ mutable struct Attractor{T1, T2, T3}
     generator::T3 
     state::Symbol # :open, :closed
 end 
+
 Attractor(ifs, alg, generator) = Attractor(ifs, alg, generator, :open)
 
 getinitset(ifs) = [rand(dimension(ifs))]
@@ -97,7 +105,7 @@ function transients(ifs, initset, numiter, posterrorbound)
     [xnew] 
 end 
 
-function taskjob(alg::RandAlg, ifs, initset, channel, chunksize) 
+function worker(alg::RandAlg, ifs, initset, channel, chunksize) 
     ws = ifs.ws 
     probs = ifs.probs 
     weights = Weights(probs)
@@ -110,7 +118,7 @@ function taskjob(alg::RandAlg, ifs, initset, channel, chunksize)
     end 
 end 
 
-function taskjob(alg::DetAlg, ifs, set, channel) 
+function worker(alg::DetAlg, ifs, set, channel) 
     ws = ifs.ws
     while true 
         set = vcat(map(w -> w.(set), ws)...)
@@ -132,7 +140,7 @@ function updatetask!(atr, chunksize)
     initset = take!(atr.generator)
     close(atr.generator) 
     atr.generator = Channel{eltype(atr.generator)}(0)
-    task = @async taskjob(atr.alg, atr.ifs, initset, atr.generator, chunksize)
+    task = @async worker(atr.alg, atr.ifs, initset, atr.generator, chunksize)
     bind(atr.generator, task)
     atr
 end 
@@ -145,7 +153,7 @@ function Attractor(ifs, alg::RandAlg; initset=getinitset(ifs), numiter=nothing, 
     else 
         initset = transients(ifs, initset, numiter, posterrorbound)
         generator = Channel{typeof(initset)}(0) 
-        task = @async taskjob(alg, ifs, initset, generator, chunksize)
+        task = @async worker(alg, ifs, initset, generator, chunksize)
         bind(generator, task)
         Attractor(ifs, alg, generator)
     end 
@@ -157,10 +165,11 @@ function Attractor(ifs, alg::DetAlg; initset=getinitset(ifs), numiter=nothing, p
     else 
         initset = transients(ifs, initset, numiter, posterrorbound)
         generator = Channel{typeof(initset)}(0) 
-        task = @async taskjob(alg, ifs, initset, generator)
+        task = @async worker(alg, ifs, initset, generator)
         bind(generator, task)
         Attractor(ifs, alg, generator)
     end 
 end
+
 
 
