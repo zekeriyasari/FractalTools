@@ -2,6 +2,9 @@
 
 export elton 
 
+# TODO: The method below compute Elton integral after drawing n points in one shot. Update the method such that the points
+# are drawn from the attractor stap by step. 
+
 """
     $SIGNATURES 
 
