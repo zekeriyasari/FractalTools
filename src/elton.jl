@@ -14,3 +14,18 @@ function elton(f, Ω , n)
     pts = vcat([take!(Ω) for i in 1 : n]...)
     sum(map(p -> f(p...), pts)) / length(pts) 
 end 
+
+function elton(f, Ω, n, chunksize)
+    # Update  chunksize of Ω
+    Ω.chunksize = chunksize 
+    
+    # Evaluate integral value in chunks 
+    total = 0 
+    npts = 0 
+    for i in 1 : n 
+        chunk = take!(Ω) 
+        total += sum(map(pnt -> f(pnt...), chunk))
+        npts  += length(npts)
+    end 
+    total / npts
+end
