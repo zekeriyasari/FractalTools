@@ -420,7 +420,8 @@ function transientsteps!(ws::AbstractVector{<:Transformation},
     if numiter === nothing
         # Compute num_iter with respect to posterrorbound
         x1 = ws[index](xinit)
-        _k = (log(posterrorbound) - log(norm(x1 - xinit))) / log(σ) + 1
+        # _k = (log(posterrorbound) - log(norm(x1 - xinit))) / log(σ) + 1
+        _k = (log(posterrorbound) + log(1-σ) - log(norm(x1 - xinit))) / log(σ) + 1
         k = Int(ceil(_k))
     else
         # Assign num_iter directly
