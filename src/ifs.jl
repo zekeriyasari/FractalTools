@@ -109,8 +109,8 @@ function worker(alg::RandAlg, ifs, initset, channel, chunksize)
     ws = ifs.ws 
     probs = ifs.probs 
     weights = Weights(probs)
+    xi = initset[end] 
     while true  
-        xi = initset[end] 
         chunk = map(1 : chunksize) do i 
             xi = xi |> sample(ws, weights)
         end 
