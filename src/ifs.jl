@@ -171,5 +171,3 @@ function Attractor(ifs, alg::DetAlg; initset=getinitset(ifs), numiter=nothing, p
     end 
 end
 
-
-
