@@ -1,6 +1,6 @@
 # This file includes methods to compute Elton integral 
 
-export elton_integral, indicator_measure
+export elton_integral, indicator_measure, elton 
 
 function elton_integral(func, ind_func, points::Attractor, 
     func_params=tuple(), ind_params=tuple(), ϵ::Real=1e-10, max_iter=1e6, windowsize=10)
@@ -70,27 +70,27 @@ end
 # Indicator measure 
 indicator_measure(x, x0, ϵ) = 2ϵ * is_in_Ball(x, x0, ϵ) 
 
-# """
-#     $SIGNATURES 
+"""
+    $SIGNATURES 
 
-# Computes Elton integral of `f` over the attracttor `Ω` for `n` points 
-# """
-# function elton(f, Ω , n)
-#     pts = vcat([take!(Ω) for i in 1 : n]...)
-#     sum(map(p -> f(p...), pts)) / length(pts) 
-# end 
+Computes Elton integral of `f` over the attracttor `Ω` for `n` points 
+"""
+function elton(f, Ω, n)
+    pts = vcat([take!(Ω) for i in Iterators.partition(1 : n, Ω.chunksize)]...)
+    sum(map(p -> f(p...), pts)) / length(pts) 
+end 
 
-# function elton(f, Ω, n, chunksize)
-#     # Update  chunksize of Ω
-#     Ω.chunksize = chunksize 
+function elton(f, Ω, n, chunksize)
+    # Update  chunksize of Ω
+    Ω.chunksize = chunksize 
     
-#     # Evaluate integral value in chunks 
-#     total = 0 
-#     npts = 0 
-#     for i in 1 : n 
-#         chunk = take!(Ω) 
-#         total += sum(map(pnt -> f(pnt...), chunk))
-#         npts  += length(chunk)
-#     end 
-#     total / npts
-# end
+    # Evaluate integral value in chunks 
+    total = 0 
+    npts = 0 
+    for i in Iterators.partition(1 : n, Ω.chunksize)
+        chunk = take!(Ω) 
+        total += sum(map(pnt -> f(pnt...), chunk))
+        npts  += length(chunk)
+    end 
+    total / npts
+end
