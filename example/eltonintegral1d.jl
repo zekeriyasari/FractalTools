@@ -1,8 +1,7 @@
 using FractalTools
 
 # Define function 
-f(x,k) = k
-f2(x,w=1) = sin(w * x)
+f(x, k=1) = k * x 
 
 # An example of one dimensional ifs
 Ω = Attractor(IFS([
@@ -11,4 +10,4 @@ f2(x,w=1) = sin(w * x)
 ]), chunksize=10)
 
 # Evaluate integral 
-elton_integral(f, indicator_measure, Ω, (1,), ([0.5], 0.25), 1e-10, 1e7)
+elton_integral(f, indicator_measure, Ω, (1,), ([0.5], 0.25), 1e-6, 1e4)

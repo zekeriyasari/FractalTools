@@ -25,7 +25,8 @@ function elton_integral(func, ind_func, points::Attractor,
         end
         filtered_set_of_points = set_of_points[index_indicator] 
         number_of_points += number_of_indicator
-        val =  func(filtered_set_of_points, func_params...) .* indicator[index_indicator]
+        val = map(p -> func(p..., func_params...), filtered_set_of_points) .* indicator[index_indicator]
+        # val =  func(filtered_set_of_points, func_params...) .* indicator[index_indicator]
         result = (1 / (number_of_points +1)) * ((old_number_of_points + 1) * old_result + sum(val))
         Δ[k % chunksize + 1] = abs(result - old_result) 
         k += 1
