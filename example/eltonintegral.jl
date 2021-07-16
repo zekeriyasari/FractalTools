@@ -1,24 +1,14 @@
-# This file compares Elton integral with quadrature integrral 
+using FractalTools
 
-using FractalTools 
-using Cubature 
-using DataFrames 
+# Define function 
+f(x,k) = k
+f2(x,w=1) = sin(w * x)
 
-# Define function and integration domain. 
-f(x, y) = x^2 + y^2 
-Ω = Attractor(Square()) # Fractal domain is unit square [0. 0] -> [1. 1]
+# An example of one dimensional ifs
+Ω = Attractor(IFS([
+    Transformation(reshape([1/2], 1, 1), [0.]), 
+    Transformation(reshape([1/2], 1, 1), [1 / 2]), 
+]), chunksize=10)
 
-# Compute integral using cubature 
-cubaval = hcubature(p -> f(p...), [0., 0.], [1., 1.]) |> first 
-
-# Compute integral using elton 
-eltonval = elton(f, Ω, 100000)
-
-# Absolute error 
-relerr = abs(cubaval - eltonval) / abs(cubaval) * 100
-
-# Display result 
-df = DataFrame(
-    name = ["Cubature Value", "Elton Value", "Relative Error"], 
-    value = [cubaval, eltonval, relerr]
-)
+# Evaluate integral 
+elton_integral(f, indicator_measure, Ω, (1,), ([0.5], 0.25), 1e-10, 1e7)

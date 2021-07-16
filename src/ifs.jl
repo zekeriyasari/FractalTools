@@ -65,11 +65,12 @@ struct RandAlg <: Algorithm end
 mutable struct Attractor{T1, T2, T3} 
     ifs::T1 
     alg::T2 
-    generator::T3 
+    generator::T3
+    chunksize::Int 
     state::Symbol # :open, :closed
 end 
 
-Attractor(ifs, alg, generator) = Attractor(ifs, alg, generator, :open)
+Attractor(ifs, alg, generator, chunksize=1) = Attractor(ifs, alg, generator, chunksize, :open)
 
 getinitset(ifs) = [rand(dimension(ifs))]
 
@@ -127,11 +128,8 @@ function worker(alg::DetAlg, ifs, set, channel)
 end 
 
 function Base.setproperty!(atr::Attractor, name::Symbol, val) 
-    if name == :chunksize 
-        updatetask!(atr, val)
-    else 
-        setfield!(atr, name, val) 
-    end 
+    name == :chunksize && updatetask!(atr, val)
+    setfield!(atr, name, val) 
 end 
 
 Base.iterate(atr::Attractor, state...) = (take!(atr), nothing)
@@ -155,7 +153,7 @@ function Attractor(ifs, alg::RandAlg; initset=getinitset(ifs), numiter=nothing, 
         generator = Channel{typeof(initset)}(0) 
         task = @async worker(alg, ifs, initset, generator, chunksize)
         bind(generator, task)
-        Attractor(ifs, alg, generator)
+        Attractor(ifs, alg, generator, chunksize)
     end 
 end
 
@@ -167,7 +165,7 @@ function Attractor(ifs, alg::DetAlg; initset=getinitset(ifs), numiter=nothing, p
         generator = Channel{typeof(initset)}(0) 
         task = @async worker(alg, ifs, initset, generator)
         bind(generator, task)
-        Attractor(ifs, alg, generator)
+        Attractor(ifs, alg, generator, 0)
     end 
 end
 
