@@ -209,7 +209,7 @@ function Attractor(ws::AbstractVector{<:Transformation},
     end 
 end 
 
-function attractor(ws::AbstractVector{<:Tranformation}, 
+function attractor(ws::AbstractVector{<:Transformation}, 
                    probs::AbstractVector{<:Real}, 
                    initset::AbstractVector{<:AbstractVector}; 
                    alg=DetAlg(), 
@@ -228,7 +228,7 @@ Computes the attractor of `ifs` with deterministic algorithm.`numiter` is number
 """
 function detalg(ws::AbstractVector{<:Transformation}, 
                 probs::AbstractVector{<:Real}, 
-                initset::AbsractVector{<:AbstractVector}; 
+                initset::AbstractVector{<:AbstractVector}; 
                 numiter::Int=10, 
                 parallel::Bool=false, 
                 chunksize::Int=10)
@@ -270,7 +270,7 @@ the number of transient iterations. If `parallel` is true, attractor is computed
 `placedependent` is true, the probabilties of the ifs are dependent on the coordinates `x`. This dependency `p(x)` is given
 via the parameters `α` and `β` where p(x) = α x + β.
 """
-function randalg(ws::AbstractVector{<:Tranformation},           # IFS transformations 
+function randalg(ws::AbstractVector{<:Transformation},           # IFS transformations 
                  probs::AbstractVector{<:Real},                 # IFS tranformation probabilities 
                  initset::AbstractVector{<:AbstractVector};     # Initial set to compute attractor 
                  numiter::Int=100,                              # Maximum iterations number 
@@ -305,8 +305,8 @@ function randalg(ws::AbstractVector{<:Tranformation},           # IFS transforma
     Attractor(RandAlg(), initset, set, numiter, parallel, chunksize)
 end
 
-function randalg_sequential(ws::AbstractVector{<:Tranformation}, 
-                            probs::AbsractVector{<:Real}, 
+function randalg_sequential(ws::AbstractVector{<:Transformation}, 
+                            probs::AbstractVector{<:Real}, 
                             set::AbstractVector{<:AbstractVector}, 
                             numiter::Int, 
                             allocated::Bool=false)
