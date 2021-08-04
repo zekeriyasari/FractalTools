@@ -1,8 +1,8 @@
 
 using FractalTools 
-using Makie 
-using AbstractPlotting
-import AbstractPlotting.GeometryBasics: TriangleFace 
+using GLMakie 
+using GLMakie
+import GLMakie.GeometryBasics: TriangleFace 
 
 # Construct delaunay 
 p1, p2, p3 = [-1., √3.], [-1., -√3], [2., 0.]

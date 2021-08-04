@@ -1,5 +1,5 @@
 using FractalTools 
-using Makie 
+using GLMakie 
 using GeometryBasics
 
 # Construct a mesh 

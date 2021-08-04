@@ -2,7 +2,7 @@
 
 using FractalTools 
 using GeometryBasics
-using Makie 
+using GLMakie 
 
 # Generate data 
 f(x, y) = x^2 + y^2 + 1

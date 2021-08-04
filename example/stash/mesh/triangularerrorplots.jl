@@ -1,6 +1,6 @@
 # This script includes a demo for the errot plots. 
 
-using Makie 
+using GLMakie 
 using FractalTools 
 using GeometryBasics
 using Random 

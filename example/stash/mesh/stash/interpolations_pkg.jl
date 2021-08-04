@@ -1,5 +1,5 @@
 using Interpolations 
-using Makie 
+using GLMakie 
 using GeometryBasics 
 import GeometryBasics: Ngon 
 using StaticArrays

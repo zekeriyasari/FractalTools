@@ -1,6 +1,6 @@
 # Fractal Surface Interpolation demo 
 
-using Makie 
+using GLMakie 
 using Random 
 using FractalTools
 using GeometryBasics 

@@ -1,4 +1,4 @@
-using Makie 
+using GLMakie 
 using GeometryBasics 
 using PyCall 
 using FractalTools

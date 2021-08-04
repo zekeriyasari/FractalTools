@@ -1,5 +1,5 @@
 using FractalTools 
-using Makie 
+using GLMakie 
 
 # Contruct a tesslation 
 tridln = Node(TriDelaunay([0., 0.], [1., 0], [0.5, 1.], addboundarypoints=true))
@@ -20,7 +20,7 @@ tripts = lift(tpnt) do val
 end 
 
 # Plot tesselation 
-fig = Figure(resolution=(500, 500), scale_plot = false, camera = AbstractPlotting.campixel!)
+fig = Figure(resolution=(500, 500), scale_plot = false, camera = GLMakie.campixel!)
 ax = fig[1, 1] =  Axis(fig) 
 mesh!(ax, msh, color=:lightblue)
 wireframe!(ax, msh, color=:black)

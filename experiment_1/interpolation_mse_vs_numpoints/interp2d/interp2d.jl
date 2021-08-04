@@ -5,23 +5,19 @@ using Makie
 
 # Construct interpolation data 
 f(x, y) = x^2 + y^2 + 1
-vtx = [
-    BigFloat.([0.0, 0.0]), 
-    BigFloat.([1.0, 0.0]), 
-    BigFloat.([0.5, 1.0])
-    ]
+Ω = uniformdomain(3, BigFloat)
 freevar = 0.001
 npts    = 50 : 5 : 150
 ntpts   = 2 * npts[end]
 
 # Construct test data 
-tpts = getdata(vtx, ntpts)
+tpts = getdata(Ω, ntpts)
 
 # Compute errors 
 mse = map(npts) do npt
     @info npt 
     # Construct interpolation data 
-    pts = getdata(f, vtx, npt)
+    pts = getdata(f, Ω, npt)
 
     # Construct interpolant 
     interp = interpolate(pts, Interp2D(freevar))
@@ -36,5 +32,5 @@ end
 fig = Figure() 
 ax = fig[1, 1] = Axis(fig, xlabel="Number of Points", ylabel="MSE", title="2D Interpolation MSE") 
 stem!(ax, npts, mse, color=:black)
-save(joinpath(@__DIR__, "interp2d_mse.png"), fig)
+# save(joinpath(@__DIR__, "interp2d_mse.png"), fig)
 display(fig)

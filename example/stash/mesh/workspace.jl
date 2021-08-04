@@ -1,7 +1,7 @@
 # This file includes an example file to plot the interpolation errors.
 
 using FractalTools 
-using Makie 
+using GLMakie 
 using StaticArrays 
 using GeometryBasics
 import GeometryBasics: Ngon 

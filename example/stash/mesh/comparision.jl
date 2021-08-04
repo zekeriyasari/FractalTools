@@ -1,6 +1,6 @@
 # This file is used for comparison of fractal interpolation and spline intepolation 
 
-using Makie 
+using GLMakie 
 using GeometryBasics 
 using FractalTools
 import Interpolations
@@ -18,7 +18,7 @@ test_mesh_2d = GeometryBasics.mesh(Tesselation(Rect2D(BigFloat.([-1., -1, 2., 2.
 test_points_3d = [Point(pnt[1], pnt[2], f(pnt[1], pnt[2])) for pnt in test_mesh_2d.position]    # points to test interpolants
 
 # Construct interpolants 
-fractal_interpolant = FractalTools.interpolate(data_points_3d)
+fractal_interpolant = FractalTools.interpolate(data_points_3d, Interp2D(0.001))
 spline_interpolant = Interpolations.interpolate(
     (unique(getindex.(data_points_3d, 1)), unique(getindex.(data_points_3d, 2))),       # x-y gridded data 
     collect(reshape(getindex.(data_points_3d, 3), ndata, ndata)),                       # z values 
@@ -56,22 +56,24 @@ ls21 = LScene(fig[2, 1])
 ls22 = LScene(fig[2, 2])
 ls23 = LScene(fig[2, 3])
 
-trisurf!(ls11, data_mesh_2d.position, true_data_points, meshcolor3=last.(true_data_points))
-trisurf!(ls11, data_mesh_2d.position, fractal_interpolant_data_points, meshcolor3=last.(fractal_interpolant_data_points), colormap=:heat)
+trisurf!(ls11, data_mesh_2d.position, true_data_points)
+trisurf!(ls11, data_mesh_2d.position, fractal_interpolant_data_points, colormap=:heat)
 wireframe!(ls11, data_mesh_2d)
 
-trisurf!(ls12, data_mesh_2d.position, fractal_interpolant_data_points_error, meshcolor3=last.(fractal_interpolant_data_points_error))
+trisurf!(ls12, data_mesh_2d.position, fractal_interpolant_data_points_error)
 wireframe!(ls12, data_mesh_2d)
 
-trisurf!(ls13, test_mesh_2d.position, fractal_interpolant_test_points_error, meshcolor3=last.(fractal_interpolant_test_points_error))
+trisurf!(ls13, test_mesh_2d.position, fractal_interpolant_test_points_error)
 wireframe!(ls13, test_mesh_2d)
 
-trisurf!(ls21, data_mesh_2d.position, true_data_points, meshcolor3=last.(true_data_points))
-trisurf!(ls21, data_mesh_2d.position, spline_interpolant_data_points, meshcolor3=last.(spline_interpolant_data_points), colormap=:heat)
+trisurf!(ls21, data_mesh_2d.position, true_data_points)
+trisurf!(ls21, data_mesh_2d.position, spline_interpolant_data_points, colormap=:heat)
 wireframe!(ls21, data_mesh_2d)
-trisurf!(ls22, data_mesh_2d.position, spline_interpolant_data_points_error, meshcolor3=last.(spline_interpolant_data_points_error))
+
+trisurf!(ls22, data_mesh_2d.position, spline_interpolant_data_points_error)
 wireframe!(ls22, data_mesh_2d)
-trisurf!(ls23, test_mesh_2d.position, spline_interpolant_test_points_error, meshcolor3=last.(spline_interpolant_test_points_error))
+
+trisurf!(ls23, test_mesh_2d.position, spline_interpolant_test_points_error)
 wireframe!(ls23, test_mesh_2d)
 
 display(fig)
