@@ -3,7 +3,7 @@
 export Interp1D, Interp2D, HInterp1D, HInterp2D, interpolate, project
 
 const PointVector{Dim} = AbstractVector{<:AbstractPoint{Dim, T}} where {T}
-const Tessellation = Union{<:LineString, <:PyObject}
+# const Tessellation = Union{<:LineString, <:PyObject}
 
 abstract type AbstractInterp end
 abstract type AbstractCurveInterp   <: AbstractInterp end       # One dimensional interpolations 
@@ -333,7 +333,7 @@ end
 
 
 # Interp1D
-function _gettransform(outline::Line, inline::Line, freevar::Real) 
+function _gettransform(outline::GeometryBasics.Line, inline::GeometryBasics.Line, freevar::Real) 
     outmat = collect(hcat(coordinates(outline)...)')
     inmat = collect(hcat(coordinates(inline)...)')
     inmat[:, end] -= outmat[:, end] * freevar
@@ -346,7 +346,7 @@ function _gettransform(outline::Line, inline::Line, freevar::Real)
 end 
 
 # HInterp1D
-function _gettransform(outline::Line, inline::Line, freevar::AbstractMatrix) 
+function _gettransform(outline::GeometryBasics.Line, inline::GeometryBasics.Line, freevar::AbstractMatrix) 
     outmat = collect(hcat(coordinates(outline)...)')
     inmat = collect(hcat(coordinates(inline)...)')
     inmat[:, 2 : 3] -= outmat[:, 2 : 3] * freevar'
