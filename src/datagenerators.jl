@@ -1,127 +1,118 @@
 # This file includes methods for data generation. 
 
-export getdata, getpoint, uniformdomain, tomesh
+export Dataset, Tessellation, tessellate, getdata, getpoint, project, uniformdomain
 
-"""
-    getdata(f, vtx, npts) 
+# --------------------------------------------- Tessellation --------------------------------- # 
 
-Returns a vector of (d + m)-dimensional points that are dispersed randomly over d-dimensioanl domain with vertex points
-`vtx`. `f` is the vector-valued function used to map each point in the domain. `npts` is the number of points to returned.
+struct Tessellation{T} 
+    tess::T 
+end 
 
-    getdata(vtx, npts) 
+function Tessellation(points, domain=[]) 
+    if isempty(domain) 
+        tess = spt.Delaunay(points)
+    elseif length(domain) == 2 
+        tess = LineString([Point(point) for point in points])
+    else 
+        triin = Triangulate.TriangulateIO()
+        triin.pointlist = hcat(points...)
+        list = 1 : length(domain)
+        triin.segmentmarkerlist = collect(list) 
+        triin.segmentlist = hcat(collect.(zip(val, circshift(val, -1)))...)
+        triout, vorout = Triangulate.triangulate("pQ", triin)
+        tess = tri.Triangulation(triout.pointlist[1, :], triout.pointlist[2, :], triout.trianglelist' .- 1)
+    end
+    Tessellation(tess)
+end 
 
-Returns a vector of d-dimensional points that are dispersed randomly over d-dimensioanl domain with vertex points
-`vtx`. `npts` is the number of points to be returned` 
-"""
-function getdata end 
 
-getdata(f, vtx::AbstractVector{<:AbstractVector}, args::Int...) = getdata(f, ngon(vtx), args...)
-getdata(vtx::AbstractVector{<:AbstractVector}, args::Int...) = getdata(ngon(vtx), args...)
+# ---------------------------------------- Dataset -------------------------- # 
 
-getdata(domain::Line, nedgepoints::Int) = boundarypoints(domain, nedgepoints)
-getdata(f, domain::Line, nedgepoints::Int) = [Point(pnt..., f(pnt...)...) for pnt in boundarypoints(domain, nedgepoints)] 
+struct Dataset{T1<:AbstractVector, T2<:AbstractVector}
+    points::T1 
+    domain::T2 
+end 
 
-# nedgepoints=10 is for backwards compatibility
-getdata(domain::Ngon, ninterpoints::Int, nedgepoints::Int=10) = disperse(domain, ninterpoints, nedgepoints)
-getdata(f, domain::Ngon, ninterpoints::Int, nedgepoints::Int=10) = 
-    [Point(pnt..., f(pnt...)...) for pnt in disperse(domain, ninterpoints, nedgepoints)] 
+Dataset(domain::AbstractVector, ninterpoints::Int, nedgepoints::Int) = 
+    Dataset(getdata(domain, ninterpoints, nedgepoints), domain)
 
-ngon(pts::AbstractVector{<:AbstractVector}) = Ngon(SVector{length(pts)}(map(item -> Point(item...), pts)))
+Dataset(f, domain::AbstractVector, ninterpoints::Int, nedgepoints::Int) = 
+    Dataset(getdata(f, domain, ninterpoints, nedgepoints), domain)
 
-"""
-    getpoint(ngon::Ngon, maxiter::Int=100_000) 
+function getdata(domain, ninterpoints, nedgepoints)
+    if length(domain) == 2
+        boundarypoints(domain, nedgepoints)
+    else
+        interpoints = interiorpoints(domain, ninterpoints)
+        boundpoints = boundarypoints(domain, nedgepoints)
+        vcat(boundpoints, interpoints) |> unique
+    end
+end 
+getdata(f, domain, ninterpoints, nedgepoints) = map(p -> [p; f(p...)], getdata(domain, ninterpoints, nedgepoints))
 
-Returns a valid that is inside of `ngon`.
+function interiorpoints(domain, ninterpoints=100)
+    Meshes.sample(
+        Meshes.Ngon(Meshes.Point.(domain)), 
+        Meshes.HomogeneousSampling(ninterpoints)
+        ) |> collect .|> Meshes.coordinates .|> collect
+end 
 
-    getpoint(line::Line) 
+function boundarypoints(domain, nedgepoints=10)
+    if length(domain) == 2 # domain is a line 
+        edgepoints(domain[1], domain[2], nedgepoints)
+    else    # domain is an ngon 
+        vcat(map(((pnt1, pnt2),) -> edgepoints(pnt1, pnt2, nedgepoints), 
+            TupleView{2, 1}(SVector([domain; [domain[1]]]...)))...)
+    end
+end
 
-Returns a valid point that is inside `line`. 
-"""
-function getpoint end 
-
-function getpoint(ngon::Ngon{Dim, T, N, P}; maxiter::Int=100_000) where {Dim, T, N, P}
-    tess = spt.Delaunay(coordinates(ngon))      
-    A, b = boundboxtransforms(ngon) 
-    iter = 1 
-    while iter ≤ maxiter 
-        val = A * rand(T, Dim) + b 
-        pnt = Point(val...) 
-        isvalidpoint(pnt, tess) && return pnt
-        iter += 1
+function edgepoints(p1, p2, nedgepoints=10) 
+    n = length(p1) 
+    m = length(p2) 
+    if m == n == 1   # p1 and p2 are one dimensional space
+        [[xi] for xi in collect(LinRange(p1[1], p2[1], nedgepoints))]
+    else    # p1 and p2 are one n-dimensional space
+        x = collect(LinRange(p1[1], p2[1], nedgepoints))
+        y = collect(LinRange(p1[2], p2[2], nedgepoints))
+        [[xi, yi] for (xi, yi) in zip(x, y)]
     end 
-    return Point(NaN, NaN) 
-end 
-
-function getpoint(line::Line{1, T}) where {T}
-    p0, p1 = only(line[1]), only(line[2])
-    pnt = p0 + (p1 - p0) * rand(T)
-    Point(pnt)
-end 
-
-"""
-    $SIGNATURES
-
-Returns a uniform ngon whose vertex points are centered at `p0` with a radius `r`.
-"""
-uniformdomain(n::Int, T::Type{<:Real}=Float64, p0::AbstractVector{<:Real}=zeros(T, 2), r::Real=1.) =
-    [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π] |> ngon 
-
-"""
-    $SIGNATURES
-
-Returns a mesh whose points are `pnts`
-"""
-tomesh(pnts::AbstractVector) = GeometryBasics.Mesh(topoint.(pnts), tofaces(topoint.(pnts)))
-
-tofaces(pnts::AbstractVector{<:AbstractPoint{N,T}}) where {N,T} = tofaces(project(pnts, N - 2))
-function tofaces(pnts::AbstractVector{<:AbstractPoint{2,T}}) where {T}
-    tess = spt.Delaunay(pnts) 
-    [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.simplices .+ 1)]
-end 
-
-topoint(pnt::AbstractPoint) = pnt
-topoint(vect::AbstractVector{<:Real}) = Point(vect...)
-topoint(vect::Real) = Point(vect)
-
-tovector(pnt::AbstractPoint) = [pnt...]
-tovector(vect::AbstractVector{<:Real}) = vect
-
-
-isvalidpoint(pnt::AbstractPoint, tess) = tess.find_simplex(pnt)[1] ≥ 0 && pnt !== Point(NaN, NaN)
-
-
-function disperse(ngon::Ngon, ninterpoints::Int, nedgepoints::Int) 
-    interpoints = interiorpoints(ngon, ninterpoints)
-    boundpoints = boundarypoints(ngon, nedgepoints)
-    vcat(boundpoints, interpoints) |> unique
 end
 
-function interiorpoints(ngon::Ngon, ninterpoints::Int)
-    allpnts = [getpoint(ngon) for i in 1 : 10 * ninterpoints]
-    [Point(val[1], val[2]) for val in eachcol(kmeans(hcat(collect.(allpnts)...), ninterpoints).centers)]
+uniformdomain(n, T=Float64, p0=zeros(T, 2), r=1.) = [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π]
+
+tessellate(dataset::Dataset) = Tessellation(dataset.domain, dataset.points)
+
+ngon(pts) = Ngon(SVector{length(pts)}(map(item -> Point(item...), pts)))
+
+function getpoint(domain) 
+    if length(domain) == 2 
+        p0, p1 = domain[1], line[2]
+        p0 + (p1 - p0) * rand(T)
+    else
+        interiorpoints(domain, 1)
+    end
 end 
 
-boundarypoints(line::Line, nedgepoints::Int=10) = edgepoints(line[1], line[2], nedgepoints)
-boundarypoints(ngon::Ngon, nedgepoints::Int=10) = vcat(map(((pnt1, pnt2),) -> edgepoints(pnt1, pnt2, nedgepoints), 
-    TupleView{2, 1}(SVector([ngon.points; [ngon.points[1]]]...)))...)
+# ---------------------------------- Meshing --------------------------------------- # 
 
-function edgepoints(p1::AbstractPoint{2, T}, p2::AbstractPoint{2, T}, nedgepoints::Int=10) where {T}
-    x = collect(LinRange(p1[1], p2[1], nedgepoints))
-    y = collect(LinRange(p1[2], p2[2], nedgepoints))
-    [Point(xi, yi) for (xi, yi) in zip(x, y)]
-end
-edgepoints(p1::AbstractPoint{1, T}, p2::AbstractPoint{1, T}, nedgepoints::Int=10) where {T} = 
-    [Point(xi) for xi in collect(LinRange(p1[1], p2[1], nedgepoints))]
-
-function boundboxtransforms(ngon::Ngon)
-    coords = coordinates(ngon) 
-    x, y = getindex.(coords, 1), getindex.(coords, 2) 
-    xmin, xmax, ymin, ymax = minimum(x), maximum(x), minimum(y), maximum(y)
-    xwidth, ywidth = xmax - xmin, ymax - ymin 
-    A = [xwidth 0; 0 ywidth]
-    b = [xmin, ymin] 
-    A, b
+tomesh(dataset::Dataset) = tomesh(dataset.point, dataset.domain)
+function tomesh(points::AbstractVector, domain=[])
+    n = length(points[1]) 
+    if n > 2 
+        points = project(points, n - 2)
+    end 
+    if isempty(domain)
+        tess = Tessellation(domain, points)
+        faces = [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.triangles .+ 1)]
+    else 
+        tess = spt.Delaunay(points) 
+        faces = [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.simplices .+ 1)]
+    end 
+    GeometryBasics.Mesh(points, faces)
 end
 
-# TODO: Complete function
-function filtertriangle(quality, args...; kwargs...) end 
+
+_project(point, n=1) = point[1 : end - n]
+
+project(points::AbstractVector, n=1) = _project.(points, n)
+project(dataset::Dataset, n=1) = Dataset(project(dataset.points, n), dataset.domain)
