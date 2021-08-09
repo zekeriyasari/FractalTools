@@ -1,6 +1,6 @@
 # This file includes methods for data generation. 
 
-export Dataset, Tessellation, tessellate, getdata, getpoint, project, uniformdomain
+export Dataset, Tessellation, getdata, getpoint, project, uniformdomain, tomesh
 
 # --------------------------------------------- Tessellation --------------------------------- # 
 
@@ -8,7 +8,7 @@ struct Tessellation{T}
     tess::T 
 end 
 
-function Tessellation(points, domain=[]) 
+function Tessellation(points::AbstractVector, domain::AbstractVector=[]) 
     if isempty(domain) 
         tess = spt.Delaunay(points)
     elseif length(domain) == 2 
@@ -18,8 +18,8 @@ function Tessellation(points, domain=[])
         triin.pointlist = hcat(points...)
         list = 1 : length(domain)
         triin.segmentmarkerlist = collect(list) 
-        triin.segmentlist = hcat(collect.(zip(val, circshift(val, -1)))...)
-        triout, vorout = Triangulate.triangulate("pQ", triin)
+        triin.segmentlist = hcat(collect.(zip(list, circshift(list, -1)))...)
+        triout, vorout = Triangulate.triangulate("p", triin)
         tess = tri.Triangulation(triout.pointlist[1, :], triout.pointlist[2, :], triout.trianglelist' .- 1)
     end
     Tessellation(tess)
@@ -45,7 +45,9 @@ function getdata(domain, ninterpoints, nedgepoints)
     else
         interpoints = interiorpoints(domain, ninterpoints)
         boundpoints = boundarypoints(domain, nedgepoints)
-        vcat(boundpoints, interpoints) |> unique
+        # `domain` is inserted to the beginning of the points. this is very place of `domian` is very important because the 
+        # constrains of the triangulation is performed with respect to the position of the domain. 
+        vcat(domain, boundpoints, interpoints) |> unique
     end
 end 
 getdata(f, domain, ninterpoints, nedgepoints) = map(p -> [p; f(p...)], getdata(domain, ninterpoints, nedgepoints))
@@ -80,7 +82,7 @@ end
 
 uniformdomain(n, T=Float64, p0=zeros(T, 2), r=1.) = [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π]
 
-tessellate(dataset::Dataset) = Tessellation(dataset.domain, dataset.points)
+Tessellation(dataset::Dataset) = Tessellation(dataset.points, dataset.domain)
 
 ngon(pts) = Ngon(SVector{length(pts)}(map(item -> Point(item...), pts)))
 
@@ -108,7 +110,7 @@ function tomesh(points::AbstractVector, domain=[])
         tess = spt.Delaunay(points) 
         faces = [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.simplices .+ 1)]
     end 
-    GeometryBasics.Mesh(points, faces)
+    GeometryBasics.Mesh([Point(point...) for point in points], faces)
 end
 
 
