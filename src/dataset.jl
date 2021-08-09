@@ -8,21 +8,39 @@ struct Tessellation{T}
     tess::T 
 end 
 
-function Tessellation(points::AbstractVector, domain::AbstractVector=[]) 
-    if isempty(domain) 
+function Tessellation(points::AbstractVector, domain::AbstractVector=[], verbose::Bool=false) 
+    if length(points[1]) == 1 
+        tess = LineString([Point(point...) for point in points])
+    elseif isempty(domain) 
         tess = spt.Delaunay(points)
-    elseif length(domain) == 2 
-        tess = LineString([Point(point) for point in points])
     else 
         triin = Triangulate.TriangulateIO()
         triin.pointlist = hcat(points...)
         list = 1 : length(domain)
         triin.segmentmarkerlist = collect(list) 
         triin.segmentlist = hcat(collect.(zip(list, circshift(list, -1)))...)
-        triout, vorout = Triangulate.triangulate("p", triin)
+        args = verbose ? "p" : "pQ"
+        triout, vorout = Triangulate.triangulate(args, triin)
         tess = tri.Triangulation(triout.pointlist[1, :], triout.pointlist[2, :], triout.trianglelist' .- 1)
     end
-    Tessellation(tess)
+    Tessellation{typeof(tess)}(tess)
+end 
+
+struct ScipyTriangulation end 
+struct MatplotlibTriangulation end 
+struct GeometryBasicsTriangulation end 
+
+function triangulationtype(tess::Tessellation) 
+    _tess = tess.tess 
+    if typeof(_tess) <: LineString
+        return GeometryBasicsTriangulation() 
+    elseif _tess.__class__ == tri.triangulation.Triangulation 
+        return MatplotlibTriangulation() 
+    elseif _tess.__class__ == spt.qhull.Delaunay
+        return ScipyTriangulation() 
+    else
+        error("Unknown triangulation type") 
+    end 
 end 
 
 
