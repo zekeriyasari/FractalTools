@@ -26,8 +26,8 @@ end
 
 include("testfunctions.jl")
 include("datagenerators.jl")
-# include("recipes.jl")
-# include("ifs.jl")
+include("recipes.jl")
+include("ifs.jl")
 # include("elton.jl")
 # include("interpolation.jl")
 # include("integration.jl")
