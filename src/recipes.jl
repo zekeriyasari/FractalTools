@@ -1,6 +1,6 @@
 # This file includes plot recipes for 
 
-export trisurf, topoint, tovector, tomesh 
+export trisurf
 
 # Configurations of Trisurf recipe 
 @recipe(Trisurf, msh) do scene 
@@ -32,7 +32,7 @@ end
 # Note: Always a tuple is returned from convert_arguments 
 
 Makie.convert_arguments(::Type{<:Trisurf}, pnts::AbstractVector...)  = (tomesh(combine.(pnts...)),)
-Makie.convert_arguments(::Type{<:Trisurf}, dataset::Dataset) = (tomesh(ds),)
+Makie.convert_arguments(::Type{<:Trisurf}, dataset::Dataset) = (tomesh(dataset),)
 Makie.convert_arguments(::Type{<:Trisurf}, domain::AbstractVector, pnts::AbstractVector...) = 
     (tomesh(combine.(pnts...), domain),)
 

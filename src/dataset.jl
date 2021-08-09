@@ -1,6 +1,6 @@
 # This file includes methods for data generation. 
 
-export Dataset, Tessellation, getdata, getpoint, project, uniformdomain, tomesh
+export Dataset, Tessellation, getdata, boundarypoints, interiorpoints, getpoint, project, uniformdomain, tomesh, locate
 
 # --------------------------------------------- Tessellation --------------------------------- # 
 
@@ -43,6 +43,50 @@ function triangulationtype(tess::Tessellation)
     end 
 end 
 
+function gettriangles(tess::Tessellation)
+    T = typeof(triangulationtype(tess))
+    if T == ScipyTriangulation 
+        tess.tess.simplices .+ 1
+    elseif T == MatplotlibTriangulation
+        tess.tess.triangles .+ 1
+    else 
+        collect(1 : length(tess.tess))
+    end 
+end 
+
+function locate(tess::Tessellation, point::AbstractVector)
+    T = typeof(triangulationtype(tess))
+    if T == ScipyTriangulation
+        n = tess.tess.find_simplex(point)[1] + 1  
+    elseif T == MatplotlibTriangulation  
+        trf = tess.tess.get_trifinder()
+        n = trf([point[1]], [point[2]])[1] + 1 
+    else
+        n = findfirst(((p1, p2),) -> p1[1] ≤ point[1] ≤ p2[1], tess.tess)
+    end 
+    n == 0 || return n 
+    point = doubleprecision(point)
+    locate(tess, point) 
+end 
+
+
+function doubleprecision(point)
+    if eltype(point) == BigFloat
+        prec = 2 * precision(BigFloat)
+        if prec ≤ MAXPREC
+            @info "BigFloat precision: $prec"
+            setprecision(prec)
+        else 
+            error("Exceeded maximum allowed precision $MAXPREC for point $point") 
+        end 
+        BigFloat.(point)
+    else
+        prec = precision(BigFloat)
+        @info "Passing to arbitrary precision arithmetic. BigFloat precision: $prec"
+        BigFloat.(string.(point))
+    end
+end 
+
 
 # ---------------------------------------- Dataset -------------------------- # 
 
@@ -51,42 +95,54 @@ struct Dataset{T1<:AbstractVector, T2<:AbstractVector}
     domain::T2 
 end 
 
+Dataset(points::AbstractVector) = Dataset(points, [])
+
 Dataset(domain::AbstractVector, ninterpoints::Int, nedgepoints::Int) = 
     Dataset(getdata(domain, ninterpoints, nedgepoints), domain)
 
 Dataset(f, domain::AbstractVector, ninterpoints::Int, nedgepoints::Int) = 
     Dataset(getdata(f, domain, ninterpoints, nedgepoints), domain)
 
-function getdata(domain, ninterpoints, nedgepoints)
-    if length(domain) == 2
-        boundarypoints(domain, nedgepoints)
+getdata(f, domain::AbstractVector, ninterpoints::Int, nedgepoints::Int) = 
+    map(p -> [p; f(p...)], getdata(domain, ninterpoints, nedgepoints))
+
+function getdata(domain::AbstractVector, ninterpoints::Int, nedgepoints::Int)
+    n = length(domain[1]) 
+    pdomain = project(domain, n - 2)
+    if length(pdomain) == 2
+        boundarypoints(pdomain, nedgepoints)
     else
-        interpoints = interiorpoints(domain, ninterpoints)
-        boundpoints = boundarypoints(domain, nedgepoints)
+        interpoints = interiorpoints(pdomain, ninterpoints)
+        boundpoints = boundarypoints(pdomain, nedgepoints)
         # `domain` is inserted to the beginning of the points. this is very place of `domian` is very important because the 
         # constrains of the triangulation is performed with respect to the position of the domain. 
-        vcat(domain, boundpoints, interpoints) |> unique
+        vcat(pdomain, boundpoints, interpoints) |> unique
     end
 end 
-getdata(f, domain, ninterpoints, nedgepoints) = map(p -> [p; f(p...)], getdata(domain, ninterpoints, nedgepoints))
 
-function interiorpoints(domain, ninterpoints=100)
+
+interiorpoints(f, domain::AbstractVector, ninterpoints::Int=100) = 
+    map(p -> [p; f(p...)], interiorpoints(domain, ninterpoints))
+
+function interiorpoints(domain::AbstractVector, ninterpoints::Int=100)
     Meshes.sample(
         Meshes.Ngon(Meshes.Point.(domain)), 
         Meshes.HomogeneousSampling(ninterpoints)
         ) |> collect .|> Meshes.coordinates .|> collect
 end 
 
-function boundarypoints(domain, nedgepoints=10)
+boundarypoints(f, domain::AbstractVector, nedgepoints::Int=10) = map(p -> [p; f(p...)], boundarypoints(domain, nedgepoints))
+
+function boundarypoints(domain::AbstractVector, nedgepoints::Int=10)
     if length(domain) == 2 # domain is a line 
-        edgepoints(domain[1], domain[2], nedgepoints)
+         edgepoints(domain[1], domain[2], nedgepoints)
     else    # domain is an ngon 
         vcat(map(((pnt1, pnt2),) -> edgepoints(pnt1, pnt2, nedgepoints), 
             TupleView{2, 1}(SVector([domain; [domain[1]]]...)))...)
     end
 end
 
-function edgepoints(p1, p2, nedgepoints=10) 
+function edgepoints(p1::AbstractVector, p2::AbstractVector, nedgepoints::Int=10) 
     n = length(p1) 
     m = length(p2) 
     if m == n == 1   # p1 and p2 are one dimensional space
@@ -95,18 +151,23 @@ function edgepoints(p1, p2, nedgepoints=10)
         x = collect(LinRange(p1[1], p2[1], nedgepoints))
         y = collect(LinRange(p1[2], p2[2], nedgepoints))
         [[xi, yi] for (xi, yi) in zip(x, y)]
-    end 
+    end
 end
 
-uniformdomain(n, T=Float64, p0=zeros(T, 2), r=1.) = [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π]
+uniformdomain(n::Int, T::Type=Float64, p0::AbstractVector=zeros(T, 2), r::Real=1.) = 
+    [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π]
+uniformdomain(f, n::Int, T::Type=Float64, p0::AbstractVector=zeros(T, 2), r::Real=1.) = 
+    map(point -> [point; f(point...)], uniformdomain(n, T, p0, r))
 
 Tessellation(dataset::Dataset) = Tessellation(dataset.points, dataset.domain)
 
 ngon(pts) = Ngon(SVector{length(pts)}(map(item -> Point(item...), pts)))
 
 function getpoint(domain) 
-    if length(domain) == 2 
-        p0, p1 = domain[1], line[2]
+    if length(domain) == 2
+        n = length(domain[1])
+        pdomain = project(domain, n - 2) 
+        p0, p1 = pdomain[1], pdomain[2]
         p0 + (p1 - p0) * rand(T)
     else
         interiorpoints(domain, 1)
@@ -115,21 +176,28 @@ end
 
 # ---------------------------------- Meshing --------------------------------------- # 
 
-tomesh(dataset::Dataset) = tomesh(dataset.points, dataset.domain)
-function tomesh(points::AbstractVector, domain=[])
-    n = length(points[1]) 
-    if n > 2 
-        _points = project(points, n - 2)
+tomesh(dataset::Dataset, tess=nothing) = tomesh(dataset.points, dataset.domain, tess)
+
+function tomesh(points::AbstractVector, domain::AbstractVector=[], tess=nothing)
+    if length(points[1]) == 1 
+        return LineString(points)
     end 
-    if isempty(domain)
-        tess = Tessellation(domain, _points)
-        faces = [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.triangles .+ 1)]
-    else 
-        tess = spt.Delaunay(_points) 
-        faces = [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.simplices .+ 1)]
+    if tess === nothing
+        tess = project_and_tessellate(points, domain)
     end 
-    GeometryBasics.Mesh([Point(point...) for point in points], faces)
+    faces = [TriangleFace(idx[1], idx[2], idx[3]) for idx in eachrow(gettriangles(tess))]
+    return GeometryBasics.Mesh([Point(point...) for point in points], faces)
 end
+
+function project_and_tessellate(points::AbstractVector, domain::AbstractVector=[])
+    n = length(points[1]) 
+    if 3 ≤ n ≤ 4  
+        _points = project(points, n - 2)
+    else
+        error("Expected dimension of points is 3 or 4, got $n instead.")
+    end 
+    Tessellation(_points, domain)
+end 
 
 # --------------------------------------- Projection ------------------------------------------------------# 
 

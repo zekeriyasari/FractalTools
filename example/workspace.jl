@@ -1,25 +1,28 @@
 using FractalTools 
-import GLMakie 
+using GLMakie 
 
 # Dataset 
-f(x, y) = x^2 + y^2
-numinterior = 100
-numboundary = 10 
+f(x, y) = x^2 + y^2 
 Ω = uniformdomain(3) 
-pts = getdata(f, Ω, numinterior, numboundary)
+ipts = interiorpoints(f, Ω, 100)
+bpts = boundarypoints(f, Ω, 10) 
+pts = [bpts; ipts]
+dataset = Dataset(pts, bpts)
 
-msh = tomesh(pts, Ω)
+# msh = tomesh(dataset)
 
-# Plots 
-fig, ax, plt = GLMakie.wireframe(msh) 
-GLMakie.wireframe!(project(msh, 1))
+# _msh = project(msh) 
+# mesh(msh, color=last.(msh.position)) 
+# wireframe!(msh, color=:black) 
+# scatter!(msh.position)
 
-pts1 = getdata([[0., 0.], [1., 0], [1., 1.]], numinterior, numboundary)
-tess1 = Tessellation(pts1, Ω)
-tess2 = Tessellation(pts1)
-pts13 = getdata([[0.], [1.]], numinterior, numboundary)
-tess3 = Tessellation(pts3)
+# Construct interpolant 
+method = Interp2D(0.001)
+interp = interpolate(dataset, method)
 
-FractalTools.triangulationtype(tess1) 
-FractalTools.triangulationtype(tess2) 
-FractalTools.triangulationtype(tess3) 
+# Evaluations
+tipts = interiorpoints(Ω, 100)
+tbpts = boundarypoints(Ω, 10)
+ivals = map(pnt ->  interp(pnt...), tipts)
+ivals = map(pnt ->  interp(pnt...), tbpts)
+

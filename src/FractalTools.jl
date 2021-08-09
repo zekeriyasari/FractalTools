@@ -28,7 +28,7 @@ include("testfunctions.jl")
 include("dataset.jl")
 include("recipes.jl")
 include("ifs.jl")
-# include("elton.jl")
+include("elton.jl")
 include("interpolation.jl")
 # include("integration.jl")
 
