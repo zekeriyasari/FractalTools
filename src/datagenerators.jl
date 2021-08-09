@@ -1,80 +1,120 @@
 # This file includes methods for data generation. 
 
-export Dataset, tessellate, mesh, uniformdomain, project 
+export Dataset, Tessellation, getdata, getpoint, project, uniformdomain, tomesh
 
-# -------------------------------------- Dataset -------------------------------------- # 
+# --------------------------------------------- Tessellation --------------------------------- # 
+
+struct Tessellation{T} 
+    tess::T 
+end 
+
+function Tessellation(points::AbstractVector, domain::AbstractVector=[]) 
+    if isempty(domain) 
+        tess = spt.Delaunay(points)
+    elseif length(domain) == 2 
+        tess = LineString([Point(point) for point in points])
+    else 
+        triin = Triangulate.TriangulateIO()
+        triin.pointlist = hcat(points...)
+        list = 1 : length(domain)
+        triin.segmentmarkerlist = collect(list) 
+        triin.segmentlist = hcat(collect.(zip(list, circshift(list, -1)))...)
+        triout, vorout = Triangulate.triangulate("p", triin)
+        tess = tri.Triangulation(triout.pointlist[1, :], triout.pointlist[2, :], triout.trianglelist' .- 1)
+    end
+    Tessellation(tess)
+end 
+
+
+# ---------------------------------------- Dataset -------------------------- # 
 
 struct Dataset{T1<:AbstractVector, T2<:AbstractVector}
-    domain::T1 
-    points::T2
+    points::T1 
+    domain::T2 
 end 
 
-function Dataset(domain::AbstractVector, numpoints::Int) 
-    if length(domain) == 2 
-        points = range(domain[1], domain[end], length=numpoints) |> collect
+Dataset(domain::AbstractVector, ninterpoints::Int, nedgepoints::Int) = 
+    Dataset(getdata(domain, ninterpoints, nedgepoints), domain)
+
+Dataset(f, domain::AbstractVector, ninterpoints::Int, nedgepoints::Int) = 
+    Dataset(getdata(f, domain, ninterpoints, nedgepoints), domain)
+
+function getdata(domain, ninterpoints, nedgepoints)
+    if length(domain) == 2
+        boundarypoints(domain, nedgepoints)
     else
-        sampledpoints = Meshes.sample(
-            Meshes.Ngon(Meshes.Point2.(domain)), 
-            Meshes.HomogeneousSampling(numpoints)
-        ) |> collect .|> Meshes.coordinates .|> collect
-        points = [domain; sampledpoints]
+        interpoints = interiorpoints(domain, ninterpoints)
+        boundpoints = boundarypoints(domain, nedgepoints)
+        # `domain` is inserted to the beginning of the points. this is very place of `domian` is very important because the 
+        # constrains of the triangulation is performed with respect to the position of the domain. 
+        vcat(domain, boundpoints, interpoints) |> unique
     end
-    Dataset(domain, points)
+end 
+getdata(f, domain, ninterpoints, nedgepoints) = map(p -> [p; f(p...)], getdata(domain, ninterpoints, nedgepoints))
+
+function interiorpoints(domain, ninterpoints=100)
+    Meshes.sample(
+        Meshes.Ngon(Meshes.Point.(domain)), 
+        Meshes.HomogeneousSampling(ninterpoints)
+        ) |> collect .|> Meshes.coordinates .|> collect
 end 
 
-function Dataset(f, domain::AbstractVector, numpoints::Int) 
-    ds = Dataset(domain, numpoints)
-    points = map(pnt -> [pnt; f(pnt...)], ds.points) 
-    Dataset(domain,  points)
-end 
+function boundarypoints(domain, nedgepoints=10)
+    if length(domain) == 2 # domain is a line 
+        edgepoints(domain[1], domain[2], nedgepoints)
+    else    # domain is an ngon 
+        vcat(map(((pnt1, pnt2),) -> edgepoints(pnt1, pnt2, nedgepoints), 
+            TupleView{2, 1}(SVector([domain; [domain[1]]]...)))...)
+    end
+end
+
+function edgepoints(p1, p2, nedgepoints=10) 
+    n = length(p1) 
+    m = length(p2) 
+    if m == n == 1   # p1 and p2 are one dimensional space
+        [[xi] for xi in collect(LinRange(p1[1], p2[1], nedgepoints))]
+    else    # p1 and p2 are one n-dimensional space
+        x = collect(LinRange(p1[1], p2[1], nedgepoints))
+        y = collect(LinRange(p1[2], p2[2], nedgepoints))
+        [[xi, yi] for (xi, yi) in zip(x, y)]
+    end 
+end
 
 uniformdomain(n, T=Float64, p0=zeros(T, 2), r=1.) = [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π]
 
-# -------------------------------------- Tessellation -------------------------------------- # 
+Tessellation(dataset::Dataset) = Tessellation(dataset.points, dataset.domain)
 
-struct Tessellation{T}
-    tess::T
+ngon(pts) = Ngon(SVector{length(pts)}(map(item -> Point(item...), pts)))
+
+function getpoint(domain) 
+    if length(domain) == 2 
+        p0, p1 = domain[1], line[2]
+        p0 + (p1 - p0) * rand(T)
+    else
+        interiorpoints(domain, 1)
+    end
 end 
 
-tessellate(dataset::Dataset) = tessellate(dataset.points, dataset.domain)
-function tessellate(pts::AbstractVector, domain::AbstractVector)
-    triin = Triangulate.TriangulateIO()
-    triin.pointlist = hcat(pts...)
-    N = length(domain)
-    triin.segmentlist = hcat([[i, i + 1] for i in 1 : N - 1]..., [N, 1])
-    triin.segmentmarkerlist = collect(1 : N)
-    triout, vorout = triangulate("pQ", triin)
-    tess = tri.Triangulation(triout.pointlist[1, :], triout.pointlist[2, :], triout.trianglelist' .- 1)
-    Tessellation(tess)
+# ---------------------------------- Meshing --------------------------------------- # 
+
+tomesh(dataset::Dataset) = tomesh(dataset.points, dataset.domain)
+function tomesh(points::AbstractVector, domain=[])
+    n = length(points[1]) 
+    if n > 2 
+        _points = project(points, n - 2)
+    end 
+    if isempty(domain)
+        tess = Tessellation(domain, _points)
+        faces = [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.triangles .+ 1)]
+    else 
+        tess = spt.Delaunay(_points) 
+        faces = [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.simplices .+ 1)]
+    end 
+    GeometryBasics.Mesh([Point(point...) for point in points], faces)
 end
 
-# -------------------------------------- Meshing -------------------------------------- # 
 
-"""
-    $SIGNATURES
+_project(point, n=1) = point[1 : end - n]
 
-Returns a mesh whose points are `pnts`
-"""
-function mesh(dataset::Dataset)
-    points = dataset.points
-    domain = dataset.domain
-    GeometryBasics.Mesh(topoint.(points), tofaces(topoint.(points), domain))
-end 
-
-tofaces(pnts::AbstractVector{<:AbstractPoint{N,T}}, domain) where {N,T} = tofaces(project(pnts, N - 2), domain)
-function tofaces(pnts::AbstractVector{<:AbstractPoint{2,T}}, domain) where {T}
-    tessellation = tessellate(pnts, domain)
-    [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tessellation.tess.triangles .+ 1)]
-end 
-
-topoint(pnt::AbstractPoint) = pnt
-topoint(vect::AbstractVector{<:Real}) = Point(vect...)
-topoint(vect::Real) = Point(vect)
-
-tovector(pnt::AbstractPoint) = [pnt...]
-tovector(vect::AbstractVector{<:Real}) = vect
-
-# -------------------------------------- Projection -------------------------------------- # 
-
-_project(pnt, n) = pnt[1 : end - n]
-project(dataset::Dataset, n::Int) = Dataset(dataset.domain, _project.(dataset.points, n))
+project(points::AbstractVector, n=1) = _project.(points, n)
+project(dataset::Dataset, n=1) = Dataset(project(dataset.points, n), dataset.domain)

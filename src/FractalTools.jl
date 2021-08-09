@@ -9,7 +9,7 @@ using Clustering
 using StaticArrays
 
 import Meshes 
-using Triangulate 
+using Triangulate
 
 using Makie
 import Makie: plot!, convert_arguments
@@ -28,9 +28,9 @@ include("testfunctions.jl")
 include("datagenerators.jl")
 include("recipes.jl")
 include("ifs.jl")
-include("elton.jl")
-include("interpolation.jl")
-include("integration.jl")
+# include("elton.jl")
+# include("interpolation.jl")
+# include("integration.jl")
 
 
 end # module
