@@ -97,17 +97,17 @@ end
 
 # ---------------------------------- Meshing --------------------------------------- # 
 
-tomesh(dataset::Dataset) = tomesh(dataset.point, dataset.domain)
+tomesh(dataset::Dataset) = tomesh(dataset.points, dataset.domain)
 function tomesh(points::AbstractVector, domain=[])
     n = length(points[1]) 
     if n > 2 
-        points = project(points, n - 2)
+        _points = project(points, n - 2)
     end 
     if isempty(domain)
-        tess = Tessellation(domain, points)
+        tess = Tessellation(domain, _points)
         faces = [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.triangles .+ 1)]
     else 
-        tess = spt.Delaunay(points) 
+        tess = spt.Delaunay(_points) 
         faces = [TriangleFace(val[1], val[2], val[3]) for val in eachrow(tess.simplices .+ 1)]
     end 
     GeometryBasics.Mesh([Point(point...) for point in points], faces)
