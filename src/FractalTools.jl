@@ -25,7 +25,7 @@ function __init__()
 end
 
 include("testfunctions.jl")
-include("datagenerators.jl")
+include("dataset.jl")
 include("recipes.jl")
 include("ifs.jl")
 # include("elton.jl")

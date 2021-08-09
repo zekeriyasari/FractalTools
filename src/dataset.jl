@@ -113,8 +113,11 @@ function tomesh(points::AbstractVector, domain=[])
     GeometryBasics.Mesh([Point(point...) for point in points], faces)
 end
 
-
-_project(point, n=1) = point[1 : end - n]
+# --------------------------------------- Projection ------------------------------------------------------# 
 
 project(points::AbstractVector, n=1) = _project.(points, n)
 project(dataset::Dataset, n=1) = Dataset(project(dataset.points, n), dataset.domain)
+project(msh::GeometryBasics.Mesh, n=1) = GeometryBasics.Mesh(project(msh.position, n), faces(msh)) 
+
+_project(point::AbstractVector, n=1) = point[1 : end - n]
+_project(point::AbstractPoint{Dim, T}, n=1) where {Dim, T} = Point{Dim - n, T}(point[1 : end - n]...)
