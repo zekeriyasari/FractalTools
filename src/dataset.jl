@@ -135,11 +135,12 @@ boundarypoints(f, domain::AbstractVector, nedgepoints::Int=10) = map(p -> [p; f(
 
 function boundarypoints(domain::AbstractVector, nedgepoints::Int=10)
     if length(domain) == 2 # domain is a line 
-         edgepoints(domain[1], domain[2], nedgepoints)
+        pts = edgepoints(domain[1], domain[2], nedgepoints)
     else    # domain is an ngon 
-        vcat(map(((pnt1, pnt2),) -> edgepoints(pnt1, pnt2, nedgepoints), 
+        pts = vcat(map(((pnt1, pnt2),) -> edgepoints(pnt1, pnt2, nedgepoints), 
             TupleView{2, 1}(SVector([domain; [domain[1]]]...)))...)
     end
+    unique(pts)
 end
 
 function edgepoints(p1::AbstractVector, p2::AbstractVector, nedgepoints::Int=10) 

@@ -1,6 +1,6 @@
 # This includes interpolation methods 
 
-export Interp1D, Interp2D, HInterp1D, HInterp2D, interpolate, project
+export Interp1D, Interp2D, HInterp1D, HInterp2D, interpolate, tessellate, project
 
 const PointVector{Dim} = AbstractVector{<:AbstractPoint{Dim, T}} where {T}
 
