@@ -7,12 +7,13 @@ using GLMakie
 # Dataset 
 f(x, y) = x^2 + y^2 + 1
 Ω = [
-    [BigFloat("-1.0"), BigFloat("-1.0")],
-    [BigFloat("1.0"), BigFloat("-1.0")],
-    [BigFloat("1.0"), BigFloat("1.0")],
-    [BigFloat("0.0"), BigFloat("0.5")],
-    [BigFloat("-1.0"), BigFloat("1.0")],
+    [-1.0, -1.0],
+    [1.0, -1.0],
+    [1.0, 1.0],
+    [0.0, 0.5],
+    [-1.0, 1.0],
 ]
+Ω = @. map(item -> BigFloat(string(item)), Ω)  # Convert to string and bigfloat.
 ipts = interiorpoints(f, Ω, 100)
 bpts = boundarypoints(f, Ω, 10) 
 pts = [bpts; ipts]
