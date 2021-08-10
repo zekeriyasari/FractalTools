@@ -1,6 +1,6 @@
 # This file includes plot recipes for 
 
-export trisurf
+export trisurf, combine
 
 # Configurations of Trisurf recipe 
 @recipe(Trisurf, msh) do scene 
@@ -31,10 +31,10 @@ end
 # We convert arguments of `trisurf` function. We add a couple of methods of `trisurf` function
 # Note: Always a tuple is returned from convert_arguments 
 
-Makie.convert_arguments(::Type{<:Trisurf}, pnts::AbstractVector...)  = (tomesh(combine.(pnts...)),)
+# Makie.convert_arguments(::Type{<:Trisurf}, pnts::AbstractVector...)  = (tomesh(combine(pnts...)),)
 Makie.convert_arguments(::Type{<:Trisurf}, dataset::Dataset) = (tomesh(dataset),)
-Makie.convert_arguments(::Type{<:Trisurf}, domain::AbstractVector, pnts::AbstractVector...) = 
-    (tomesh(combine.(pnts...), domain),)
+Makie.convert_arguments(::Type{<:Trisurf}, pnts1::AbstractVector, pnts2::AbstractVector, domain::AbstractVector) = 
+    (tomesh(combine(pnts1, pnts2), domain),)
 
 Makie.convert_arguments(plt::Type{<:Trisurf}, pnts::AbstractVector, f::Function) =  
     convert_arguments(plt, map(pnt -> Point(pnt..., f(pnt...)...), pnts))
@@ -42,4 +42,4 @@ Makie.convert_arguments(plt::Type{<:Trisurf}, pnts::AbstractVector, f::Function)
 Makie.convert_arguments(::Type{<:Trisurf}, msh2::GeometryBasics.Mesh, f::Function) = 
     (GeometryBasics.Mesh([Point(pnt..., f(pnt...)) for pnt in msh2.position], faces(msh2)),)
 
-combine(ps...) = vcat([[p...] for p in ps]...)
+combine(vals::AbstractVector...) = [vcat(val...) for val in zip(vals...)]

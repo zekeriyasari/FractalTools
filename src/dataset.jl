@@ -2,6 +2,8 @@
 
 export Dataset, Tessellation, getdata, boundarypoints, interiorpoints, getpoint, project, uniformdomain, tomesh, locate
 
+Meshes.atol(::Type{BigFloat}) = 100eps()
+
 # --------------------------------------------- Tessellation --------------------------------- # 
 
 struct Tessellation{T} 

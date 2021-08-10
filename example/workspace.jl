@@ -3,10 +3,9 @@
 
 using FractalTools 
 using GLMakie 
-using Triangulate
 
 # Dataset 
-f(x, y) = x^2 + y^2 
+f(x, y) = x^2 + y^2 + 1
 Ω = [
     [BigFloat("-1.0"), BigFloat("-1.0")],
     [BigFloat("1.0"), BigFloat("-1.0")],
@@ -24,47 +23,22 @@ method = Interp2D(0.001)
 interp = interpolate(dataset, method)
 
 # Evaluations
-tipts = interiorpoints(Ω, 100)
-ivals = map(pnt ->  interp(pnt...), tipts)
+tipts = interiorpoints(Ω, 1000)
+tbpts = boundarypoints(Ω, 10)
+tpts = [tbpts; tipts]
+ivals = map(pnt ->  interp(pnt...), tpts)
+fvals = map(pnt ->  f(pnt...), tpts)
+abserr = abs.(fvals - ivals) 
+relerr = abserr ./ abs.(fvals) * 100
 
-
-# tbpts = boundarypoints(Ω, 10)
-# ivals = map(pnt ->  interp(pnt...), tbpts)
-
-# # Test location 
-# tpts = project(dataset.points)
-# tpt = tpts[1] 
-# tess = tessellate(dataset, method)
-# idx = locate(tess, tpt)
-
-msh = tomesh(dataset)
-msh2 = project(msh)
-
-fig, ax, plt = mesh(msh, color=last.(msh.position))
-wireframe!(msh, linewidth=3)
-mesh!(msh2, color=last.(msh2.position))
-wireframe!(msh2, color=:black)
-scatter!(msh2.position, color=:black)
-scatter!(collect(msh2[idx].points))
-scatter!([tpt[1]], [tpt[2]])
-
-
-fig, ax, plt = wireframe(msh2) 
-
-pts = project(dataset.points)
-idx = 10 
-tpnt = pts[idx]
-tval = interp(tpnt[1], tpnt[2])
-scatter!(Point(tpnt...))
-
-indexes = map(enumerate(pts)) do (i, pnt) 
-    try
-        tval = interp(pnt...)
-        return true 
-    catch 
-        return false
-    end
-end 
-n = length(pts)
-nfound = length(pts[indexes])
-nnotfound = length(pts[.!indexes])
+# Plots 
+fig = Figure() 
+ls11 = Axis3(fig[1, 1])
+ls12 = Axis3(fig[1, 2])
+ls21 = Axis3(fig[2, 1])
+ls22 = Axis3(fig[2, 2])
+plt11 = trisurf!(ls11, tpts, fvals, tbpts)
+plt12 = trisurf!(ls12, tpts, ivals, tbpts)
+plt21 = trisurf!(ls21, tpts, abserr, tbpts)
+plt21 = trisurf!(ls22, tpts, relerr, tbpts)
+fig 
