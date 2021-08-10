@@ -33,6 +33,9 @@ abserr = abs.(fvals - ivals)
 relerr = abserr ./ abs.(fvals) * 100
 
 # Plots 
+
+msh = tomesh(combine(tpts, fvals), tbpts) |> project 
+
 fig = Figure() 
 ls11 = Axis3(fig[1, 1])
 ls12 = Axis3(fig[1, 2])
@@ -42,4 +45,7 @@ plt11 = trisurf!(ls11, tpts, fvals, tbpts)
 plt12 = trisurf!(ls12, tpts, ivals, tbpts)
 plt21 = trisurf!(ls21, tpts, abserr, tbpts)
 plt21 = trisurf!(ls22, tpts, relerr, tbpts)
+for ls in [ls11, ls12, ls21, ls22]
+    wireframe!(ls, msh, linewidth=2)
+end 
 fig 
