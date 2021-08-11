@@ -1,8 +1,59 @@
 # This file includes methods for data generation. 
 
-export Dataset, Tessellation, getdata, boundarypoints, interiorpoints, getpoint, project, uniformdomain, tomesh, locate
+export Dataset, Tessellation, getdata, boundarypoints, interiorpoints, getpoint, project, uniformdomain, tomesh, locate, bigfloat, combine, generate
 
+# Methods arbitrary precision arithmetic
 Meshes.atol(::Type{BigFloat}) = 100eps()
+bigfloat(Ω::AbstractArray) = @. map(item -> BigFloat(string(item)), Ω)
+
+combine(vals::AbstractVector...) = [vcat(val...) for val in zip(vals...)]
+
+# ------------------------------ Point generation -------------------------------------------- # 
+
+generate(f, pts::AbstractVector, lc::Real=0.01; interior::Bool=true) = 
+    map(pnt -> [pnt; f(pnt...)], generate(pts, lc, interior=interior))
+
+function generate(pts::AbstractVector, lc::Real=0.01; interior::Bool=true) 
+    # Initialize gmsh 
+    gmsh.initialize()
+
+    # Add model 
+    gmsh.option.setNumber("General.Terminal", 1)
+    gmsh.model.add("t1")
+
+    # Add points 
+    for (k, pt) in enumerate(pts)
+        gmsh.model.geo.addPoint(pt..., 0, lc, k)
+    end 
+
+    # Add lines 
+    idx = 1 : length(pts)
+    for (k, (i, j)) in zip(idx, circshift(idx, -1)) |> enumerate
+        gmsh.model.geo.addLine(i, j, k)
+    end 
+
+    # Add surface
+    if interior
+        gmsh.model.geo.addCurveLoop(idx, 1)
+        gmsh.model.geo.addPlaneSurface([1], 1)
+    end 
+
+    # Mesh surface 
+    gmsh.model.geo.synchronize()
+    gmsh.model.mesh.generate(2)
+
+    # Collect triangulated coordinates
+    (_, gpts, _) = gmsh.model.mesh.getNodes()
+    x = gpts[1 : 3 : end]
+    y = gpts[2 : 3 : end]
+
+    # Finalize gmsh 
+    gmsh.finalize()
+
+    # Return coordinates 
+    combine(x, y)
+end 
+
 
 # --------------------------------------------- Tessellation --------------------------------- # 
 

@@ -1,6 +1,6 @@
 # This file includes plot recipes for 
 
-export trisurf, combine
+export trisurf
 
 # Configurations of Trisurf recipe 
 @recipe(Trisurf, msh) do scene 
@@ -41,5 +41,3 @@ Makie.convert_arguments(plt::Type{<:Trisurf}, pnts::AbstractVector, f::Function)
 
 Makie.convert_arguments(::Type{<:Trisurf}, msh2::GeometryBasics.Mesh, f::Function) = 
     (GeometryBasics.Mesh([Point(pnt..., f(pnt...)) for pnt in msh2.position], faces(msh2)),)
-
-combine(vals::AbstractVector...) = [vcat(val...) for val in zip(vals...)]

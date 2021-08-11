@@ -8,7 +8,8 @@ using GeometryBasics
 using Clustering
 using StaticArrays
 
-import Meshes 
+import Gmsh: gmsh 
+import Meshes # Remove Meshes dependency. Use Gmsh, instead 
 using Triangulate
 using Printf
 
