@@ -6,54 +6,6 @@ export Dataset, Tessellation, getdata, boundarypoints, interiorpoints, getpoint,
 Meshes.atol(::Type{BigFloat}) = 100eps()
 bigfloat(Ω::AbstractArray) = @. map(item -> BigFloat(string(item)), Ω)
 
-combine(vals::AbstractVector...) = [vcat(val...) for val in zip(vals...)]
-
-# ------------------------------ Point generation -------------------------------------------- # 
-
-generate(f, pts::AbstractVector, lc::Real=0.01; interior::Bool=true) = 
-    map(pnt -> [pnt; f(pnt...)], generate(pts, lc, interior=interior))
-
-function generate(pts::AbstractVector, lc::Real=0.01; interior::Bool=true) 
-    # Initialize gmsh 
-    gmsh.initialize()
-
-    # Add model 
-    gmsh.option.setNumber("General.Terminal", 1)
-    gmsh.model.add("t1")
-
-    # Add points 
-    for (k, pt) in enumerate(pts)
-        gmsh.model.geo.addPoint(pt..., 0, lc, k)
-    end 
-
-    # Add lines 
-    idx = 1 : length(pts)
-    for (k, (i, j)) in zip(idx, circshift(idx, -1)) |> enumerate
-        gmsh.model.geo.addLine(i, j, k)
-    end 
-
-    # Add surface
-    if interior
-        gmsh.model.geo.addCurveLoop(idx, 1)
-        gmsh.model.geo.addPlaneSurface([1], 1)
-    end 
-
-    # Mesh surface 
-    gmsh.model.geo.synchronize()
-    gmsh.model.mesh.generate(2)
-
-    # Collect triangulated coordinates
-    (_, gpts, _) = gmsh.model.mesh.getNodes()
-    x = gpts[1 : 3 : end]
-    y = gpts[2 : 3 : end]
-
-    # Finalize gmsh 
-    gmsh.finalize()
-
-    # Return coordinates 
-    combine(x, y)
-end 
-
 
 # --------------------------------------------- Tessellation --------------------------------- # 
 
@@ -150,63 +102,161 @@ end
 
 Dataset(points::AbstractVector) = Dataset(points, [])
 
-Dataset(domain::AbstractVector, ninterpoints::Int, nedgepoints::Int) = 
-    Dataset(getdata(domain, ninterpoints, nedgepoints), domain)
+Dataset(domain::AbstractVector, lc::Real) = Dataset(getdata(domain, lc)...)
 
-Dataset(f, domain::AbstractVector, ninterpoints::Int, nedgepoints::Int) = 
-    Dataset(getdata(f, domain, ninterpoints, nedgepoints), domain)
+Dataset(f, domain::AbstractVector, lc::Real=0.1; kwargs...) = Dataset(getdata(f, domain, lc; kwargs...)...)
 
-getdata(f, domain::AbstractVector, ninterpoints::Int, nedgepoints::Int) = 
-    map(p -> [p; f(p...)], getdata(domain, ninterpoints, nedgepoints))
+function getdata(f, domain::AbstractVector, lc::Real=0.1; kwargs...) 
+    apts, bpts = getdata(domain, lc; kwargs...)
+    map(p -> [p; f(p...)], apts), map(p -> [p; f(p...)], bpts)
+end
 
-function getdata(domain::AbstractVector, ninterpoints::Int, nedgepoints::Int)
-    n = length(domain[1]) 
-    pdomain = project(domain, n - 2)
-    if length(pdomain) == 2
-        boundarypoints(pdomain, nedgepoints)
-    else
-        interpoints = interiorpoints(pdomain, ninterpoints)
-        boundpoints = boundarypoints(pdomain, nedgepoints)
-        # `domain` is inserted to the beginning of the points. this is very place of `domian` is very important because the 
-        # constrains of the triangulation is performed with respect to the position of the domain. 
-        vcat(pdomain, boundpoints, interpoints) |> unique
-    end
+function getdata(domain::AbstractVector, lc::Real=0.1; writefile::Bool=false, filepath::String=randommeshpath()) 
+    # Initialize gmsh 
+    gmsh.initialize()
+
+    # Add model 
+    gmsh.option.setNumber("General.Terminal", 1)
+    gmsh.model.add("t1")
+    geo = gmsh.model.geo 
+    msh = gmsh.model.mesh 
+
+    # Add points 
+    for (k, pt) in enumerate(domain)
+        geo.addPoint(pt..., 0, lc, k)
+    end 
+
+    # Add lines 
+    idx = 1 : length(domain)
+    for (k, (i, j)) in zip(idx, circshift(idx, -1)) |> enumerate
+        geo.addLine(i, j, k)
+    end 
+
+    # Add surface
+    geo.addCurveLoop(idx, 1)
+    geo.addPlaneSurface([1], 1)
+
+    # Mesh surface 
+    geo.synchronize()
+    msh.generate(2) # 2-dimensional meshing 
+
+
+    # Extract bounary points 
+    _, linenodetags = msh.getElementsByType(1) # Get line points 
+    linenodetags = linenodetags .|> Int 
+    nodes = msh.getNode.(linenodetags) .|> first 
+    boundpts = combine(getindex.(nodes, 1), getindex.(nodes, 2)) |> unique
+
+     # Extract all points 
+    _, xyz = msh.getNodes()
+    allx = xyz[1 : 3 : end] 
+    ally = xyz[2 : 3 : end] 
+    _allpts = combine(allx, ally)
+    allpts = [boundpts; setdiff(_allpts, boundpts)]
+
+    # Finalize gmsh 
+    if writefile
+        endswith(filepath, ".msh") ?  gmsh.write(filepath) : error("Expected `.msh` as file extension.")
+    end 
+    gmsh.finalize()
+
+    # Return dataset 
+    return (allpts, boundpts)
 end 
 
 
-interiorpoints(f, domain::AbstractVector, ninterpoints::Int=100) = 
-    map(p -> [p; f(p...)], interiorpoints(domain, ninterpoints))
+# interiorpoints(f, pts::AbstractVector, lc::Real=0.01; kwargs...) = 
+#     map(pnt -> [pnt; f(pnt...)], interiorpoints(pts, lc; kwargs...))
 
-function interiorpoints(domain::AbstractVector, ninterpoints::Int=100)
-    Meshes.sample(
-        Meshes.Ngon(Meshes.Point.(domain)), 
-        Meshes.HomogeneousSampling(ninterpoints)
-        ) |> collect .|> Meshes.coordinates .|> collect
-end 
+# function interiorpoints(pts::AbstractVector, lc::Real=0.01; writefile::Bool=false, filepath::String=randommeshpath()) 
+#     # Initialize gmsh 
+#     gmsh.initialize()
 
-boundarypoints(f, domain::AbstractVector, nedgepoints::Int=10) = map(p -> [p; f(p...)], boundarypoints(domain, nedgepoints))
+#     # Add model 
+#     gmsh.option.setNumber("General.Terminal", 1)
+#     gmsh.model.add("t1")
+#     geo = gmsh.model.geo 
+#     msh = gmsh.model.mesh 
 
-function boundarypoints(domain::AbstractVector, nedgepoints::Int=10)
-    if length(domain) == 2 # domain is a line 
-        pts = edgepoints(domain[1], domain[2], nedgepoints)
-    else    # domain is an ngon 
-        pts = vcat(map(((pnt1, pnt2),) -> edgepoints(pnt1, pnt2, nedgepoints), 
-            TupleView{2, 1}(SVector([domain; [domain[1]]]...)))...)
-    end
-    unique(pts)
-end
+#     # Add points 
+#     for (k, pt) in enumerate(pts)
+#         geo.addPoint(pt..., 0, lc, k)
+#     end 
 
-function edgepoints(p1::AbstractVector, p2::AbstractVector, nedgepoints::Int=10) 
-    n = length(p1) 
-    m = length(p2) 
-    if m == n == 1   # p1 and p2 are one dimensional space
-        [[xi] for xi in collect(LinRange(p1[1], p2[1], nedgepoints))]
-    else    # p1 and p2 are one n-dimensional space
-        x = collect(LinRange(p1[1], p2[1], nedgepoints))
-        y = collect(LinRange(p1[2], p2[2], nedgepoints))
-        [[xi, yi] for (xi, yi) in zip(x, y)]
-    end
-end
+#     # Add lines 
+#     idx = 1 : length(pts)
+#     for (k, (i, j)) in zip(idx, circshift(idx, -1)) |> enumerate
+#         geo.addLine(i, j, k)
+#     end 
+
+#     # Add surface
+#     geo.addCurveLoop(idx, 1)
+#     geo.addPlaneSurface([1], 1)
+
+#     # Mesh surface 
+#     geo.synchronize()
+#     msh.generate(2) # 2-dimensional meshing 
+
+#     # Collect triangulated coordinates
+#     (_, gpts, _) = gmsh.model.mesh.getNodes()
+#     x = gpts[1 : 3 : end]
+#     y = gpts[2 : 3 : end]
+#     rpts = combine(x, y)
+
+#     # Finalize gmsh 
+#     if writefile
+#         endswith(filepath, ".msh") ?  gmsh.write(filepath) : error("Expected `.msh` as file extension.")
+#     end 
+#     gmsh.finalize()
+
+#     # Return coordinates 
+#     return rpts 
+# end 
+
+
+# boundarypoints(f, pts::AbstractVector, lc::Real=0.1; kwargs...) = map(p -> [p; f(p...)], boundarypoints(pts, lc; kwargs...))
+
+# function boundarypoints(pts::AbstractVector, lc::Real=0.1; writefile::Bool=false, filepath::String=randommeshpath())
+#     # Initialize gmsh 
+#     gmsh.initialize()
+
+#     # Initialize model 
+#     gmsh.option.setNumber("General.Terminal", 1)
+#     gmsh.model.add("t1")
+#     geo = gmsh.model.geo 
+#     msh = gmsh.model.mesh
+
+#     # Add points 
+#     for (k, pt) in enumerate(pts)
+#         geo.addPoint(pt..., 0, lc, k)
+#     end 
+
+#     # Add lines 
+#     idx = 1 : length(pts)
+#     for (k, (i, j)) in zip(idx, circshift(idx, -1)) |> enumerate
+#         geo.addLine(i, j, k)
+#     end 
+
+#     # Mesh surface 
+#     geo.synchronize()
+#     msh.generate(2)
+
+#     # Extract boundarypoints 
+#     _, _, _nodetags = msh.getElements(1) 
+#     nodetags = _nodetags |> only .|> Int 
+#     nodes = msh.getNode.(nodetags) .|> first 
+#     rpts = combine(getindex.(nodes, 1), getindex.(nodes, 2)) |> unique
+
+#     # Finalize gmsh 
+#     if writefile
+#         endswith(filepath, ".msh") ? gmsh.write(filepath) : error("Expected file extension is `.msh`")
+#     end 
+#     gmsh.finalize()
+
+#     # Return points 
+#     return rpts
+# end 
+
 
 uniformdomain(n::Int, T::Type=Float64, p0::AbstractVector=zeros(T, 2), r::Real=1.) = 
     [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π]

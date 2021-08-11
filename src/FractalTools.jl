@@ -26,6 +26,7 @@ function __init__()
     global tri = pyimport_conda("matplotlib.tri", "tri")
 end
 
+include("utils.jl")
 include("testfunctions.jl")
 include("dataset.jl")
 include("recipes.jl")
