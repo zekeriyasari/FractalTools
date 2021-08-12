@@ -1,51 +1,46 @@
-# Import Meshes.atol to package 
-# Meshes.atol(::Type{BigFloat}) = 100 * eps()
+# This file includes example surface interpolation performance
 
-using FractalTools 
+using FractalTools
 using GLMakie 
 
 # Dataset 
 f(x, y) = x^2 + y^2 + 1
 Ω = [
-    [-1.0, -1.0],
-    [1.0, -1.0],
-    [1.0, 1.0],
-    [0.0, 0.5],
-    [-1.0, 1.0],
+    [-2., 0.], 
+    [-1., 1.], 
+    [0., 0.], 
+    [1., 1.], 
+    [2., 0.], 
+    [2., -1.], 
+    [1., 0.], 
+    [0., -1.], 
+    [-1., 0.], 
+    [-2., -1.], 
 ]
-Ω = @. map(item -> BigFloat(string(item)), Ω)  # Convert to string and bigfloat.
-ipts = interiorpoints(f, Ω, 100)
-bpts = boundarypoints(f, Ω, 10) 
-pts = [bpts; ipts]
-dataset = Dataset(pts, bpts)
+lc = 0.1
+dataset = Dataset(f, Ω, lc)
 
-# Construct interpolant 
+# Perform interpolation 
 method = Interp2D(0.001)
 interp = interpolate(dataset, method)
 
-# Evaluations
-tipts = interiorpoints(Ω, 1000)
-tbpts = boundarypoints(Ω, 10)
-tpts = [tbpts; tipts]
-ivals = map(pnt ->  interp(pnt...), tpts)
-fvals = map(pnt ->  f(pnt...), tpts)
+# Evaluate interpolation 
+tpts, tbpts = getdata(Ω, lc/2)
+ivals = map(pnt -> interp(pnt...), tpts)
+fvals = map(pnt -> f(pnt...), tpts)
 abserr = abs.(fvals - ivals) 
 relerr = abserr ./ abs.(fvals) * 100
 
 # Plots 
-
-msh = tomesh(combine(tpts, fvals), tbpts) |> project 
-
-fig = Figure() 
-ls11 = Axis3(fig[1, 1])
-ls12 = Axis3(fig[1, 2])
-ls21 = Axis3(fig[2, 1])
-ls22 = Axis3(fig[2, 2])
-plt11 = trisurf!(ls11, tpts, fvals, tbpts)
-plt12 = trisurf!(ls12, tpts, ivals, tbpts)
-plt21 = trisurf!(ls21, tpts, abserr, tbpts)
-plt21 = trisurf!(ls22, tpts, relerr, tbpts)
-for ls in [ls11, ls12, ls21, ls22]
-    wireframe!(ls, msh, linewidth=2)
+tess = Tessellation(tpts, tbpts)
+msh = tomesh(tpts, tbpts, tess)
+fig = Figure()
+ls = [LScene(fig[i,j]) for i in 1 : 2, j in 1 : 2]
+trisurf!(ls[1, 1], tpts, fvals, tbpts)
+trisurf!(ls[1, 2], tpts, ivals, tbpts)
+trisurf!(ls[2, 1], tpts, abserr, tbpts)
+trisurf!(ls[2, 2], tpts, relerr, tbpts)
+for lsi in ls 
+    wireframe!(lsi, msh)
 end 
-fig 
+fig

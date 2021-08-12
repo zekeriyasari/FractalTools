@@ -1,6 +1,7 @@
 # This file includes methods for data generation. 
 
-export Dataset, Tessellation, getdata, boundarypoints, interiorpoints, getpoint, project, uniformdomain, tomesh, locate, bigfloat, combine, generate
+export Dataset, Tessellation, getdata, boundarypoints, interiorpoints, project, uniformdomain, tomesh, locate, 
+    bigfloat, combine, generate, getpoints
 
 # Methods arbitrary precision arithmetic
 Meshes.atol(::Type{BigFloat}) = 100eps()
@@ -59,7 +60,23 @@ function gettriangles(tess::Tessellation)
     end 
 end 
 
+function getpoints(tess::Tessellation)
+    T = typeof(triangulationtype(tess))
+    if T == ScipyTriangulation 
+        tess.tess.points
+    elseif T == MatplotlibTriangulation
+        combine(tess.tess.x, tess.tess.y)
+    else 
+        coordinates(tess.tess) .|> collect
+    end 
+end 
+
 function locate(tess::Tessellation, point::AbstractVector)
+    # Construct a knn tree 
+    pts = getpoints(tess) 
+    tree = KDTree(hcat(pts...))
+
+    # Search for the triangle 
     T = typeof(triangulationtype(tess))
     if T == ScipyTriangulation
         n = tess.tess.find_simplex(point)[1] + 1  
@@ -69,28 +86,32 @@ function locate(tess::Tessellation, point::AbstractVector)
     else
         n = findfirst(((p1, p2),) -> p1[1] ≤ point[1] ≤ p2[1], tess.tess)
     end 
-    n == 0 || return n 
-    point = doubleprecision(point)
-    locate(tess, point) 
+
+    # If point could not be located, locate its nearest neighbour
+    if n == 0   
+        point = pts[nn(tree, point) |> first]
+        return locate(tess, point)
+    end 
+    return n
 end 
 
 
-function doubleprecision(point)
-    if eltype(point) == BigFloat
-        prec = 2 * precision(BigFloat)
-        if prec ≤ MAXPREC
-            @info "BigFloat precision: $prec"
-            setprecision(prec)
-        else 
-            error("Exceeded maximum allowed precision $MAXPREC for point $point") 
-        end 
-        BigFloat.(point)
-    else
-        prec = precision(BigFloat)
-        @info "Passing to arbitrary precision arithmetic. BigFloat precision: $prec"
-        BigFloat.(string.(point))
-    end
-end 
+# function doubleprecision(point)
+#     if eltype(point) == BigFloat
+#         prec = 2 * precision(BigFloat)
+#         if prec ≤ MAXPREC
+#             @info "BigFloat precision: $prec"
+#             setprecision(prec)
+#         else 
+#             error("Exceeded maximum allowed precision $MAXPREC for point $point") 
+#         end 
+#         BigFloat.(point)
+#     else
+#         prec = precision(BigFloat)
+#         @info "Passing to arbitrary precision arithmetic. BigFloat precision: $prec"
+#         BigFloat.(string.(point))
+#     end
+# end 
 
 
 # ---------------------------------------- Dataset -------------------------- # 
