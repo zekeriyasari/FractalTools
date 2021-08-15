@@ -1,33 +1,21 @@
 using FractalTools
 using GLMakie 
 
-using ConcaveHull
 
 # Data generation 
-α = 10.
-f(x, y) = FractalTools.ackley(x, y) 
+α = 1.
+f(x, y) = FractalTools.paraboloid(x, y) 
 n = 6
 Ω = [[cos(θ), sin(θ)] for θ in range(0, 2π, step=2π/n)] * α
-lc = 0.2 * α
+lc = 0.1 * α
 pts = getdata(f, Ω, lc)
-
-Ω = [
-    [0., 0.],
-    [1., 0.],
-    [1., 1.],
-    [0.5, 0.5],
-    [0., 1.],
-]
-lc = 0.1
-pts = getdata(Ω, lc)
-hull = concave_hull(pts, 100)
 
 # Interpolation 
 method = Interp2D(1e-3)
-interp = interpolate(pts, method, niter=10)
+interp = interpolate(pts, method)
 
 # Evaluations 
-tpts = getdata(Ω, lc/4)
+tpts = getdata(Ω, lc/2)
 ivals = map(pnt -> interp(pnt...), tpts)
 fvals = map(pnt -> f(pnt...), tpts)
 abserr = abs.(fvals - ivals)
@@ -46,13 +34,3 @@ for li in ls
 end 
 fig 
 
-# # Plot 
-# msh = tomesh(pts) |> project
-# fig, ax, plt = scatterlines(getindex.(Ω, 1), getindex.(Ω, 2))
-scatter(getindex.(pts, 1), getindex.(pts, 2))
-scatterlines!(getindex.(hull.vertices, 1), getindex.(hull.vertices, 2))
-# wireframe!(msh)
-# scatter!(getindex.([pm], 1), getindex.([pm], 2), color=:red)
-# isempty(ppts) ||  scatter!(getindex.(ppts, 1), getindex.(ppts, 2), color=:red)
-# @info length(ppts)
-# fig 
