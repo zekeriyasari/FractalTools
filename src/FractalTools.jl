@@ -5,8 +5,9 @@ using Distributed
 using PyCall
 using LinearAlgebra
 using GeometryBasics
-using Clustering
 using StaticArrays
+
+import Gmsh: gmsh
 
 using Makie
 import Makie: plot!, convert_arguments
@@ -21,7 +22,8 @@ function __init__()
 end
 
 include("testfunctions.jl")
-include("datagenerators.jl")
+include("utils.jl")
+include("dataset.jl")
 include("recipes.jl")
 include("ifs.jl")
 include("elton.jl")

@@ -1,6 +1,6 @@
 # This file includes IFS tools 
 
-export  Transformation, IFS, Attractor, Tree, Line, Square, Fern, Sierpinski, DetAlg, RandAlg, dimension, contfactor 
+export  Transformation, IFS, Attractor, Tree, Strip, Square, Fern, Sierpinski, DetAlg, RandAlg, dimension, contfactor 
 
 #--- ------------------------------------- Transformation ------------------------------------------------ # 
 
@@ -76,7 +76,7 @@ contfactor(ifs::IFS) = maximum(contfactor.(ifs.ws))
 
 Returns the IFS of a line between [0, 1].
 """
-Line() = IFS([
+Strip() = IFS([
     Transformation(fill(1 / 2, 1, 1), fill(0, 1)), 
     Transformation(fill(1 / 2, 1, 1), fill(1 / 2, 1))
 ])

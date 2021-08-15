@@ -264,9 +264,18 @@ _locate(pnt::AbstractPoint{2, T}, tess::PyObject)   where {T} = tess.find_simple
 function locate(pnt::AbstractPoint, tess::Tessellation)
     n = _locate(pnt, tess)
     n == 0 || return n 
-    pnt = doubleprecision(pnt)
+    # pnt = doubleprecision(pnt)
+    pnt = moveinside(pnt, tess)
     locate(pnt, tess) 
 end 
+
+function moveinside(pnt, tess) 
+    p0 = vec(sum(tess.points, dims=1) / size(tess.points, 1))
+    v = p0 - pnt 
+    w = v / norm(v) 
+    pnt + 1e-6 * w 
+end 
+
 
 function doubleprecision(pnt::AbstractPoint{N,<:Real}) where {N}
     prec = precision(BigFloat)
