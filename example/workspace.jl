@@ -1,5 +1,5 @@
 using FractalTools
-using GLMakie 
+# using GLMakie 
 
 
 # Data generation 
@@ -12,7 +12,8 @@ pts = getdata(f, Ω, lc)
 
 # Interpolation 
 method = Interp2D(1e-3)
-interp = interpolate(pts, method)
+interp = interpolate(pts, method, f0=(x, y) -> x + y)
+interp(tpts[100]...; d=0.0001)
 
 # Evaluations 
 tpts = getdata(Ω, lc/2)
@@ -20,6 +21,7 @@ ivals = map(pnt -> interp(pnt...), tpts)
 fvals = map(pnt -> f(pnt...), tpts)
 abserr = abs.(fvals - ivals)
 relerr = abserr ./ abs.(fvals) * 100
+
 
 # Plots 
 msh = tomesh(tpts)

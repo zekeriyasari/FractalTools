@@ -201,7 +201,7 @@ struct Interpolant{T1<:IFS, T2, T3<:AbstractInterp} <: Function
     method::T3 
 end 
 
-(interp::Interpolant)(x...) = interp.itp(x...)
+(interp::Interpolant)(x...; kwargs...) = interp.itp(x...; kwargs...)
 
 """
     $SIGNATURES
@@ -235,14 +235,14 @@ function interpolate(pts::PointVector, method::AbstractInterp; f0 = getinitf(met
     tess = Tessellation(project(pts, method))
     transforms = gettransforms(pts, method, tess)
     mappings = getmappings(transforms, method)
-    itp = wrap(f0, tess, mappings, niter)[1]
+    itp = wrap((args...; kwargs...) -> f0(args...), tess, mappings, niter)[1]
     Interpolant(IFS(transforms), itp, method)
 end 
 
 
 getinitf(::Interp1D)   = x -> 0. 
 getinitf(::HInterp1D)  = x -> [0., 0.]
-getinitf(::Interp2D)   = (x, y) -> 0. 
+getinitf(::Interp2D)   = (x, y; kwargs...) -> 0. 
 getinitf(::HInterp2D)  = (x, y) -> [0., 0.] 
 
 """
@@ -414,12 +414,13 @@ wrap(f0, tess::Tessellation, mappings::AbstractVector{<:Tuple{T, S}}, niter::Int
     ((f0, tess, mappings)) |> ∘((wrapper for i in 1 : niter)...) 
 
 function wrapper((f, tess, mappings))
-    function fnext(x...) 
+    function fnext(x...; kwargs...) 
+        @info kwargs
         pnt = Point(x...) 
-        n = locate(pnt, tess)
+        n = locate(pnt, tess, d=get(kwargs, :d, 100eps()))
         linv, F = mappings[n]
         val = linv(x...) 
-        F(val..., f(val...)...)
+        F(val..., f(val...; kwargs...)...)
     end, tess, mappings
 end
 
@@ -434,14 +435,14 @@ end
 locate(pnt::AbstractPoint{1, T1}, tess::Tessellation{T2, T3}) where {T1, T2<:LineString, T3} = 
     findfirst(((p1, p2),) -> p1[1] ≤ pnt[1] ≤ p2[1], tess)
 
-function locate(pnt::AbstractPoint{2, T1}, tess::Tessellation{T2, T3}, d::Real=1e-6) where {T1, T2<:PyObject, T3} 
+function locate(pnt::AbstractPoint{2, T1}, tess::Tessellation{T2, T3}; d::Real=100eps()) where {T1, T2<:PyObject, T3} 
     n = only(tess.tess.find_simplex(pnt)) + 1  
     n == 0 || return n 
-    pnt = moveinside(pnt, tess, d)
-    locate(pnt, tess, d) 
+    pnt = moveinside(pnt, tess, d = d)
+    locate(pnt, tess, d=d) 
 end 
 
-function moveinside(pnt, tess, d=1e-6) 
+function moveinside(pnt, tess; d=100eps()) 
     hull = tess.hull
     p0 = vec(sum(hull.points[hull.vertices .+ 1, :], dims=1)) / hull.npoints
     v = p0 - pnt 
