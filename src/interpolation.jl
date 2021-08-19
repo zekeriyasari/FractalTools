@@ -415,7 +415,6 @@ wrap(f0, tess::Tessellation, mappings::AbstractVector{<:Tuple{T, S}}, niter::Int
 
 function wrapper((f, tess, mappings))
     function fnext(x...; kwargs...) 
-        @info kwargs
         pnt = Point(x...) 
         n = locate(pnt, tess, d=get(kwargs, :d, 100eps()))
         linv, F = mappings[n]
