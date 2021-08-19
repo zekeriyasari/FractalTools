@@ -85,7 +85,7 @@ topoint(pnt::AbstractPoint) = pnt
 topoint(vect::AbstractVector{<:Real}) = Point(vect...)
 topoint(vect::Real) = Point(vect)
 
-tovector(pnt::AbstractPoint) = [pnt...]
+# tovector(pnt::AbstractPoint) = [pnt...]
 tovector(vect::AbstractVector{<:Real}) = vect
 
 

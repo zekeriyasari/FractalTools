@@ -442,9 +442,10 @@ function locate(pnt::AbstractPoint{2, T1}, tess::Tessellation{T2, T3}, d::Real=1
 end 
 
 function moveinside(pnt, tess, d=1e-6) 
+    #  Move point to the centroid of the vertex points of the convex hull
     hull = tess.hull
-    p0 = vec(sum(hull.points[hull.vertices .+ 1, :], dims=1)) / hull.npoints
+    p0 = vec(sum(hull.points[hull.vertices .+ 1, :], dims=1)) / hull.npoints  # Centroid 
     v = p0 - pnt 
-    w = v / norm(v) 
+    w = v / norm(v) # Unit vector for move direction
     pnt + d * w 
 end 
