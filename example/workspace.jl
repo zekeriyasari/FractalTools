@@ -1,5 +1,5 @@
 using FractalTools
-# using GLMakie 
+using GLMakie 
 
 
 # Data generation 
@@ -12,12 +12,11 @@ pts = getdata(f, Ω, lc)
 
 # Interpolation 
 method = Interp2D(1e-3)
-interp = interpolate(pts, method, f0=(x, y) -> x + y)
-interp(tpts[100]...; d=0.0001)
+interp = interpolate(pts, method)
 
 # Evaluations 
 tpts = getdata(Ω, lc/2)
-ivals = map(pnt -> interp(pnt...), tpts)
+ivals = map(pnt -> interp(pnt...; d = 1e-9), tpts)
 fvals = map(pnt -> f(pnt...), tpts)
 abserr = abs.(fvals - ivals)
 relerr = abserr ./ abs.(fvals) * 100

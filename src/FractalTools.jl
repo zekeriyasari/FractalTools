@@ -15,7 +15,8 @@ import GeometryBasics: Ngon
 import Base: show, display
 import StatsBase: sample, Weights
 
-const MAXPREC = 1024    # Maximum precision for BigFloat arithmetic 
+const MAXPREC = 1024                # Maximum precision for BigFloat arithmetic 
+const MAX_LOCATION_COUNT = 100      # Maximum number of iteration for point location. 
 
 function __init__()
     global spt = pyimport_conda("scipy.spatial", "scipy")
