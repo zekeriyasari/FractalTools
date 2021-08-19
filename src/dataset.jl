@@ -66,7 +66,7 @@ end
 Returns a uniform ngon whose vertex points are centered at `p0` with a radius `r`.
 """
 uniformdomain(n::Int, T::Type{<:Real}=Float64, p0::AbstractVector{<:Real}=zeros(T, 2), r::Real=1.) =
-    [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π] |> ngon 
+    [p0 + T[r * cos(θ), r*sin(θ)] for θ in (0 : n - 1) / n * 2π] 
 
 """
     $SIGNATURES

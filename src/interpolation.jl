@@ -444,8 +444,8 @@ end
 
 function moveinside(pnt, tess; d=100eps()) 
     hull = tess.hull
-    p0 = vec(sum(hull.points[hull.vertices .+ 1, :], dims=1)) / hull.npoints
+    p0 = vec(sum(hull.points[hull.vertices .+ 1, :], dims=1)) / hull.npoints  # Centroid 
     v = p0 - pnt 
-    w = v / norm(v) 
+    w = v / norm(v) # Unit vector for move direction
     pnt + d * w 
 end 
