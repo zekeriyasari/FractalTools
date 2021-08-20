@@ -16,7 +16,8 @@ import Base: show, display
 import StatsBase: sample, Weights
 
 const MAXPREC = 1024                # Maximum precision for BigFloat arithmetic 
-const MAX_LOCATION_COUNT = 100      # Maximum number of iteration for point location. 
+const MAX_LOCATION_COUNT = 1000      # Maximum number of iteration for point location. See `locate` function
+const POINT_LOCATION_PERTUBATION = 1e-6     # Amoun of perturbatin for point loation. See `locate` function
 
 function __init__()
     global spt = pyimport_conda("scipy.spatial", "scipy")

@@ -435,7 +435,7 @@ locate(pnt::AbstractPoint{1, T1}, tess::Tessellation{T2, T3}) where {T1, T2<:Lin
     findfirst(((p1, p2),) -> p1[1] ≤ pnt[1] ≤ p2[1], tess)
 
 _locate(pnt, tess) = only(tess.tess.find_simplex(pnt)) + 1  
-function locate(pnt::AbstractPoint{2, T1}, tess::Tessellation{T2, T3}; d::Real=100eps()) where {T1, T2<:PyObject, T3} 
+function locate(pnt::AbstractPoint{2, T1}, tess::Tessellation{T2, T3}; d::Real=POINT_LOCATION_PERTUBATION) where {T1, T2<:PyObject, T3} 
     n = _locate(pnt, tess) 
     n == 0 || return n
     count = 0
@@ -449,7 +449,8 @@ function locate(pnt::AbstractPoint{2, T1}, tess::Tessellation{T2, T3}; d::Real=1
     error("Exceeded maximum location iteration ", MAX_LOCATION_COUNT, " for the point ", pnt)
 end 
 
-function moveinside(pnt, tess; d=100eps()) 
+# Moves the point by pertubationg the point in the direction of the centroid of the convex full of the interpolation domain. 
+function moveinside(pnt, tess; d=POINT_LOCATION_PERTUBATION) 
     hull = tess.hull
     p0 = vec(sum(hull.points[hull.vertices .+ 1, :], dims=1)) / hull.npoints  # Centroid 
     v = p0 - pnt 

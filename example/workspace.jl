@@ -4,7 +4,7 @@ using GLMakie
 
 # Data generation 
 α = 1.
-f(x, y) = FractalTools.paraboloid(x, y) 
+f(x, y) = FractalTools.paraboloid(x, y) + 1
 n = 6
 Ω = [[cos(θ), sin(θ)] for θ in range(0, 2π, step=2π/n)] * α
 lc = 0.1 * α
@@ -16,11 +16,10 @@ interp = interpolate(pts, method)
 
 # Evaluations 
 tpts = getdata(Ω, lc/2)
-ivals = map(pnt -> interp(pnt...; d = 1e-9), tpts)
+ivals = map(pnt -> interp(pnt...; d = 1e-4), tpts)
 fvals = map(pnt -> f(pnt...), tpts)
 abserr = abs.(fvals - ivals)
 relerr = abserr ./ abs.(fvals) * 100
-
 
 # Plots 
 msh = tomesh(tpts)
