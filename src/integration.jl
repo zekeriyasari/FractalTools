@@ -17,13 +17,13 @@ integrate(pts::AbstractVector{<:AbstractVector{<:Real}}, method::AbstractInterp)
     integrate(map(pnt -> Point(pnt...), pts), method)
 
 function integrate(pts::PointVector, method::AbstractInterp) 
-    tess = tessellate(pts, method)
-    transforms = gettransforms(pts, method)
-    val = evaluate(transforms, method, pts) 
+    tess = Tessellation(project(pts, method))
+    transforms = gettransforms(pts, method, tess)
+    val = evaluate(transforms, method, pts, tess) 
 end 
 
 # Interp1D
-function evaluate(transforms::AbstractVector{<:Transformation}, method::Interp1D, pts::PointVector{2})
+function evaluate(transforms::AbstractVector{<:Transformation}, method::Interp1D, pts::PointVector{2}, tess::Tessellation)
     x  = getindex.(pts, 1) 
     (a11, a21, _, a22), (b1, b2) = extract(transforms)
 
@@ -38,7 +38,7 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::Interp1D
 end 
 
 # HInterp1D
-function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp1D, pts::PointVector{3})
+function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp1D, pts::PointVector{3}, tess::Tessellation)
     x = getindex.(pts, 1)
     (a11, a21, a31, _, a22, a32, _, a23, a33), (b1, b2, b3) = extract(transforms)
 
@@ -58,8 +58,8 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp1
 end 
 
 # Interp2D
-function evaluate(transforms::AbstractVector{<:Transformation}, method::Interp2D, pts::PointVector{3})
-    (x1, y1), (x2, y2), (x3, y3) = getboundary(pts, method) 
+function evaluate(transforms::AbstractVector{<:Transformation}, method::Interp2D, pts::PointVector{3}, tess::Tessellation)
+    (x1, y1), (x2, y2), (x3, y3) = getboundary(pts, method, tess) 
 
     k11 = x2 - x1;      k12 = x3 - x1;      l1 = x1 
     k21 = y2 - y1;      k22 = y3 - y1;      l2 = y1
@@ -79,8 +79,8 @@ function evaluate(transforms::AbstractVector{<:Transformation}, method::Interp2D
 end 
 
 # HInterp2D
-function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp2D, pts::PointVector{4})
-    (x1, y1), (x2, y2), (x3, y3) = getboundary(pts, method) 
+function evaluate(transforms::AbstractVector{<:Transformation}, method::HInterp2D, pts::PointVector{4}, tess::Tessellation)
+    (x1, y1), (x2, y2), (x3, y3) = getboundary(pts, method, tess) 
     k11 = x2 - x1;      k12 = x3 - x1;      l1 = x1 
     k21 = y2 - y1;      k22 = y3 - y1;      l2 = y1
     
