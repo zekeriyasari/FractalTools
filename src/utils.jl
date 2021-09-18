@@ -1,6 +1,6 @@
 # This file includes utility functions 
 
-export combine, tovector, topoint, bigfloat
+export combine, tovector, topoint, bigfloat, meshgrid, getline 
 
 """
     $SIGNATURES 
@@ -36,7 +36,6 @@ tovector(pnt::AbstractPoint) = [pnt...]
 topoint(vector::AbstractVector) = Point(vector...)
 
 randomstring(n::Int=10) = String(rand('A' : 'z', n))
-
 
 randommeshpath(n::Int=10) = joinpath(tempdir(), randomstring(n) * ".msh")
 
@@ -75,3 +74,7 @@ function movepoint(p1, p2, p3, d=distance(p1, p2, p3) + 100eps())
     (o0 == o1) && (w = -w)
     p3 + d * w 
 end 
+
+meshgrid(x, y) = ones(length(y)) * x', y * ones(length(x))'
+
+getline(xi, yi, xf, yf) = x -> (yf - yi) / (xf - xi) * (x - xi) + yi
