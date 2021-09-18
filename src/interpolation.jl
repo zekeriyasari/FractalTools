@@ -11,7 +11,7 @@ struct Tessellation{T1, T2}
 end 
 
 function Tessellation(pts::AbstractVector)
-    if length(pts) == 2 
+    if length(first(pts)) == 1 
         tess = LineString(pts)
         hull = [first(pts), last(pts)]
     else
@@ -431,8 +431,8 @@ end
 # precison(specified to be 1024 bits as MAXPREC). If MAXPREC is reached and the point still cannot be found, the point
 # location fails with an error message.   
 
-locate(pnt::AbstractPoint{1, T1}, tess::Tessellation{T2, T3}) where {T1, T2<:LineString, T3} = 
-    findfirst(((p1, p2),) -> p1[1] ≤ pnt[1] ≤ p2[1], tess)
+locate(pnt::AbstractPoint{1, T1}, tess::Tessellation{T2, T3}; d::Real=POINT_LOCATION_PERTUBATION) where {T1, T2<:LineString, T3} = 
+    findfirst(((p1, p2),) -> p1[1] ≤ pnt[1] ≤ p2[1], tess.tess)
 
 _locate(pnt, tess) = only(tess.tess.find_simplex(pnt)) + 1  
 function locate(pnt::AbstractPoint{2, T1}, tess::Tessellation{T2, T3}; d::Real=POINT_LOCATION_PERTUBATION) where {T1, T2<:PyObject, T3} 

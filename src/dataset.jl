@@ -2,9 +2,52 @@
 
 export getdata, tomesh, uniformdomain
 
-getdata(f, domain::AbstractVector, lc::Real=0.1; kwargs...) = map(pnt -> [pnt; f(pnt...)], getdata(domain, lc))
+getdata(f, domain::AbstractVector, lc::Real=0.1; kwargs...) = map(pnt -> [pnt; f(pnt...)], getdata(domain, lc; kwargs...))
 
-function getdata(domain::AbstractVector, lc::Real=0.1; writefile::Bool=false, filepath::String=randommeshpath()) 
+function getdata(domain::AbstractVector, lc::Real=0.1; kwargs...)
+    if length(first(domain)) == 1 
+        getdata1d(domain, lc; kwargs...) 
+    else  
+        getdata2d(domain, lc; kwargs...)
+    end 
+end 
+
+function getdata1d(domain::AbstractVector, lc::Real=0.1; writefile::Bool=false, filepath::String=randommeshpath())
+    # Initialize gmsh 
+    gmsh.initialize()
+
+    # Add model 
+    gmsh.option.setNumber("General.Terminal", 1)
+    gmsh.model.add("t1")
+    geo = gmsh.model.geo 
+    msh = gmsh.model.mesh 
+
+    # Add points 
+    geo.addPoint(only(domain[1]), 0, 0, lc, 1) 
+    geo.addPoint(only(domain[2]), 0, 0, lc, 2) 
+
+    # Add lines 
+    geo.addLine(1, 2, 1) 
+
+    # Mesh surface 
+    geo.synchronize()
+    msh.generate(2) # 2-dimensional meshing 
+
+     # Extract all points 
+    _, xyz = msh.getNodes()
+    allpts = xyz[1 : 3 : end] 
+
+    # Finalize gmsh 
+    if writefile
+        endswith(filepath, ".msh") ?  gmsh.write(filepath) : error("Expected `.msh` as file extension.")
+    end 
+    gmsh.finalize()
+
+    # Return dataset 
+    return [[item] for item in sort(allpts)]
+end 
+
+function getdata2d(domain::AbstractVector, lc::Real=0.1; writefile::Bool=false, filepath::String=randommeshpath()) 
     # Initialize gmsh 
     gmsh.initialize()
 
