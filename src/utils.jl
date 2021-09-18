@@ -75,6 +75,16 @@ function movepoint(p1, p2, p3, d=distance(p1, p2, p3) + 100eps())
     p3 + d * w 
 end 
 
+"""
+    $SIGNATURES
+
+Returns mesh grid data 
+"""
 meshgrid(x, y) = ones(length(y)) * x', y * ones(length(x))'
 
+"""
+    $SIGNATURES
+
+Returns a line function `y = g(x)` passing from (xi, yi) to (xf, yf).
+"""
 getline(xi, yi, xf, yf) = x -> (yf - yi) / (xf - xi) * (x - xi) + yi

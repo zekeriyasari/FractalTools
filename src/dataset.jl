@@ -4,15 +4,29 @@ export getdata, tomesh, uniformdomain
 
 getdata(f, domain::AbstractVector, lc::Real=0.1; kwargs...) = map(pnt -> [pnt; f(pnt...)], getdata(domain, lc; kwargs...))
 
-function getdata(domain::AbstractVector, lc::Real=0.1; kwargs...)
+function getdata(domain::AbstractVector, lc::Real=0.1; writefile::Bool=false, filepath::String=randommeshpath(), gridded::Bool=false)
+    # Generate points 
     if length(first(domain)) == 1 
-        getdata1d(domain, lc; kwargs...) 
+        pts = getdata1d(domain, lc, gridded) 
     else  
-        getdata2d(domain, lc; kwargs...)
+        pts = getdata2d(domain, lc, gridded)
     end 
+
+    # Write file  
+    if writefile
+        endswith(filepath, ".msh") ?  gmsh.write(filepath) : error("Expected `.msh` as file extension.")
+    end 
+
+    # Return points 
+    return pts 
 end 
 
-function getdata1d(domain::AbstractVector, lc::Real=0.1; writefile::Bool=false, filepath::String=randommeshpath())
+function getdata1d(domain::AbstractVector, lc::Real=0.1, gridded::Bool=false)
+    if gridded 
+        xi, xf = domain
+        return map(item -> [item], only(xi) : lc : only(xf))
+    end 
+
     # Initialize gmsh 
     gmsh.initialize()
 
@@ -33,21 +47,29 @@ function getdata1d(domain::AbstractVector, lc::Real=0.1; writefile::Bool=false, 
     geo.synchronize()
     msh.generate(2) # 2-dimensional meshing 
 
-     # Extract all points 
+    # Extract all points 
     _, xyz = msh.getNodes()
     allpts = xyz[1 : 3 : end] 
 
     # Finalize gmsh 
-    if writefile
-        endswith(filepath, ".msh") ?  gmsh.write(filepath) : error("Expected `.msh` as file extension.")
-    end 
     gmsh.finalize()
 
     # Return dataset 
     return [[item] for item in sort(allpts)]
 end 
 
-function getdata2d(domain::AbstractVector, lc::Real=0.1; writefile::Bool=false, filepath::String=randommeshpath()) 
+function getdata2d(domain::AbstractVector, lc::Real=0.1, gridded::Bool=false) 
+    if gridded 
+        x = getindex.(domain, 1) 
+        y = getindex.(domain, 2)
+        xi, xf = minimum(x), maximum(x) 
+        yi, yf = minimum(y), maximum(y) 
+        xr =  xi : lc : xf 
+        yr =  yi : lc : yf
+        xm, ym = meshgrid(xr, yr) 
+        return vec(collect.(zip(xm, ym))) 
+    end 
+
     # Initialize gmsh 
     gmsh.initialize()
 
@@ -94,9 +116,6 @@ function getdata2d(domain::AbstractVector, lc::Real=0.1; writefile::Bool=false, 
     allpts = combine(xyz[1 : 3 : end] ,  xyz[2 : 3 : end])
 
     # Finalize gmsh 
-    if writefile
-        endswith(filepath, ".msh") ?  gmsh.write(filepath) : error("Expected `.msh` as file extension.")
-    end 
     gmsh.finalize()
 
     # Return dataset 
