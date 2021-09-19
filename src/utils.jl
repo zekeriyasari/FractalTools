@@ -1,6 +1,6 @@
 # This file includes utility functions 
 
-export combine, tovector, topoint, bigfloat, meshgrid, getline 
+export combine, tovector, topoint, bigfloat, meshgrid, getline, torange
 
 """
     $SIGNATURES 
@@ -88,3 +88,10 @@ meshgrid(x, y) = ones(length(y)) * x', y * ones(length(x))'
 Returns a line function `y = g(x)` passing from (xi, yi) to (xf, yf).
 """
 getline(xi, yi, xf, yf) = x -> (yf - yi) / (xf - xi) * (x - xi) + yi
+
+function torange(vector) 
+    dvector = diff(vector)
+    dx = first(dvector)
+    all(dvector .≈ dx) || error("The vector is not uniformly sampled") 
+    range(vector[1], vector[end], length=length(vector))  
+end 
