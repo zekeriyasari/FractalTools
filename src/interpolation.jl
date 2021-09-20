@@ -3,7 +3,28 @@
 export Interp1D, Interp2D, HInterp1D, HInterp2D, interpolate, project
 
 const PointVector{Dim} = AbstractVector{<:AbstractPoint{Dim, T}} where {T}
-const Tessellation = Union{<:LineString, <:PyObject}
+# const Tessellation = Union{<:LineString, <:PyObject}
+
+struct Tessellation{T1, T2} 
+    tess::T1 
+    hull::T2 
+end 
+
+function Tessellation(pts::AbstractVector)
+    if length(first(pts)) == 1 
+        tess = LineString(pts)
+        hull = [first(pts), last(pts)]
+    else
+        tess = spt.Delaunay(pts)
+        hull = spt.ConvexHull(collect(hcat(pts...)'))
+    end 
+    Tessellation(tess, hull)
+end 
+
+getpoints(tess::Tessellation{<:LineString, T2}) where {T2} = coordinates(tess.tess) .|> collect
+getpoints(tess::Tessellation{<:PyObject, T2})   where {T2} = tess.tess.points
+
+gettriangles(tess::Tessellation{<:PyObject, T2}) where {T2} =  tess.tess.simplices .+ 1
 
 abstract type AbstractInterp end
 abstract type AbstractCurveInterp   <: AbstractInterp end       # One dimensional interpolations 
@@ -180,7 +201,7 @@ struct Interpolant{T1<:IFS, T2, T3<:AbstractInterp} <: Function
     method::T3 
 end 
 
-(interp::Interpolant)(x...) = interp.itp(x...)
+(interp::Interpolant)(x...; kwargs...) = interp.itp(x...; kwargs...)
 
 """
     $SIGNATURES
@@ -210,17 +231,18 @@ interpolate(pts::AbstractVector{<:AbstractVector{<:Real}}, method::AbstractInter
     interpolate(map(pnt -> Point(pnt...), pts), method, f0=f0, niter=niter)
 
 function interpolate(pts::PointVector, method::AbstractInterp; f0 = getinitf(method), niter::Int = 10) 
-    tess = tessellate(pts, method)
-    transforms = gettransforms(pts, method)
+    # tess = tessellate(pts, method)
+    tess = Tessellation(project(pts, method))
+    transforms = gettransforms(pts, method, tess)
     mappings = getmappings(transforms, method)
-    itp = wrap(f0, tess, mappings, niter)[1]
+    itp = wrap((args...; kwargs...) -> f0(args...), tess, mappings, niter)[1]
     Interpolant(IFS(transforms), itp, method)
 end 
 
 
 getinitf(::Interp1D)   = x -> 0. 
 getinitf(::HInterp1D)  = x -> [0., 0.]
-getinitf(::Interp2D)   = (x, y) -> 0. 
+getinitf(::Interp2D)   = (x, y; kwargs...) -> 0. 
 getinitf(::HInterp2D)  = (x, y) -> [0., 0.] 
 
 """
@@ -246,64 +268,23 @@ project(pts::PointVector{4}, ::HInterp2D)      = project(pts, 2)
 # function. So to calculate the interpolant `interp` at a point `pnt`, we need to locate `pnt` to find the correct subdomain.
 # We use tessellations to locate the points. See also `locate` function 
 
-tessellate(pts::PointVector{2}, method::Interp1D)  = LineString(project(pts, method))
-tessellate(pts::PointVector{3}, method::HInterp1D) = LineString(project(pts, method)) 
-tessellate(pts::PointVector{3}, method::Interp2D)  = spt.Delaunay(project(pts, method))
-tessellate(pts::PointVector{4}, method::HInterp2D) = spt.Delaunay(project(pts, method))
-
-# Because of finite precison arithmetic, the location of a valid point may fail. To overcome this, we can switch to arbitrary
-# precision arithmetic (by using BigFloat) in the expense of increasing the computationonal complexity. However, not to
-# increase the computationonal complexity directly, the strategy employed here is this:  before switching completely to
-# arbitrary precision arithmetic, we first try to locate the point with finite precision (Float64 precision). If the point
-# cannot be located, we double the precision and try to locate the point again. We do this until maximum allowed
-# precison(specified to be 1024 bits as MAXPREC). If MAXPREC is reached and the point still cannot be found, the point
-# location fails with an error message.   
-
-_locate(pnt::AbstractPoint{1, T}, tess::LineString) where {T} = findfirst(((p1, p2),) -> p1[1] ≤ pnt[1] ≤ p2[1], tess)
-_locate(pnt::AbstractPoint{2, T}, tess::PyObject)   where {T} = tess.find_simplex(pnt)[1] + 1  
-function locate(pnt::AbstractPoint, tess::Tessellation)
-    n = _locate(pnt, tess)
-    n == 0 || return n 
-    pnt = doubleprecision(pnt)
-    locate(pnt, tess) 
-end 
-
-function doubleprecision(pnt::AbstractPoint{N,<:Real}) where {N}
-    prec = precision(BigFloat)
-    @info "Passing to arbitrary precision arithmetic. BigFloat precision: $prec"
-    Point(BigFloat.(string.(pnt))...)
-end 
-
-function doubleprecision(pnt::AbstractPoint{N,<:BigFloat}) where {N}
-    prec = 2 * precision(BigFloat)
-    if prec ≤ MAXPREC
-        @info "BigFloat precision: $prec"
-        setprecision(prec)
-    else 
-        error("Exceeded maximum allowed precision $MAXPREC for point $pnt") 
-    end 
-    Point(BigFloat.(pnt)...)
-end 
-
 # IFS coefficients of the interpolant is found by using a linear algrebraic equation system using the boundary conditions.
 # Each subtransformation in the transformations of a IFS maps a larger domain (Line in case of curve interpolation and
 # Triangle in case of surface interpolation) to a smaller domain. These mappings maps the boundary points of the larger
 # domains to boundary points of the smaller domains. `partition` function returns these smaller domains. 
 
 partition(pts::PointVector, method::AbstractCurveInterp) = LineString(pts) 
-function partition(pts::PointVector, method::AbstractSurfaceInterp, tess::Tessellation=tessellate(pts, method)) 
-    trifaces = [TriangleFace(val...) for val in eachrow(tess.simplices .+ 1)]
-    GeometryBasics.Mesh(pts, trifaces)
-end 
+partition(pts::PointVector, method::AbstractSurfaceInterp) = tomesh(pts)
 
 # In case of curve interpolations, the boundary is the line that connects the endpoints of the interpolation domain. In case
 # of surface interpolations, the interpolation domain is triangle, than that triangle is the boundary. If the interpolation
 # domain is ngon (such as, tetragon, pentagon, hexagon, etc.) the triangle that can be drawn inside the convex hull of the
 # points and that has the largest area is returned.
 
-getboundary(pts::PointVector, ::AbstractCurveInterp) = Line(pts[1], pts[end])
-function getboundary(pts::PointVector, method::AbstractSurfaceInterp) 
-    hull = spt.ConvexHull(collect(hcat(collect.(project(pts, method))...)') )
+getboundary(pts::PointVector, ::AbstractCurveInterp, ::Tessellation) = Line(pts[1], pts[end])
+function getboundary(pts::PointVector, method::AbstractSurfaceInterp, tess::Tessellation) 
+    # hull = spt.ConvexHull(collect(hcat(collect.(project(pts, method))...)'))
+    hull = tess.hull
     if length(hull.vertices) == 3   # Triangle  
         Triangle(Point.(pts[hull.vertices .+ 1])...)
     else    # Ngon (tetragon, pentagon, hexagon, etc...)
@@ -323,11 +304,11 @@ function getboundary(pts::PointVector, method::AbstractSurfaceInterp)
 end 
 
 # `gettransforms` returns tranforms that maps outer domains to smaller domains in the interpolation domain. 
-function gettransforms(pts::PointVector, method::AbstractInterp) 
+function gettransforms(pts::PointVector, method::AbstractInterp, tess::Tessellation) 
     parts = partition(pts, method)
     n = length(parts)
     freevars = typeof(method.freevars) <: AbstractVector ? method.freevars : fill(method.freevars, n)
-    boundary = getboundary(pts, method)
+    boundary = getboundary(pts, method, tess)
     map(((domain, freevar),) -> _gettransform(boundary, domain, freevar), zip(parts, freevars))
 end 
 
@@ -433,12 +414,46 @@ wrap(f0, tess::Tessellation, mappings::AbstractVector{<:Tuple{T, S}}, niter::Int
     ((f0, tess, mappings)) |> ∘((wrapper for i in 1 : niter)...) 
 
 function wrapper((f, tess, mappings))
-    function fnext(x...) 
+    function fnext(x...; kwargs...) 
         pnt = Point(x...) 
-        n = locate(pnt, tess)
-        # n == 0 && error("Point $pnt cannot be found.")
+        n = locate(pnt, tess, d=get(kwargs, :d, 100eps()))
         linv, F = mappings[n]
         val = linv(x...) 
-        F(val..., f(val...)...)
+        F(val..., f(val...; kwargs...)...)
     end, tess, mappings
 end
+
+# Because of finite precison arithmetic, the location of a valid point may fail. To overcome this, we can switch to arbitrary
+# precision arithmetic (by using BigFloat) in the expense of increasing the computationonal complexity. However, not to
+# increase the computationonal complexity directly, the strategy employed here is this:  before switching completely to
+# arbitrary precision arithmetic, we first try to locate the point with finite precision (Float64 precision). If the point
+# cannot be located, we double the precision and try to locate the point again. We do this until maximum allowed
+# precison(specified to be 1024 bits as MAXPREC). If MAXPREC is reached and the point still cannot be found, the point
+# location fails with an error message.   
+
+locate(pnt::AbstractPoint{1, T1}, tess::Tessellation{T2, T3}; d::Real=POINT_LOCATION_PERTUBATION) where {T1, T2<:LineString, T3} = 
+    findfirst(((p1, p2),) -> p1[1] ≤ pnt[1] ≤ p2[1], tess.tess)
+
+_locate(pnt, tess) = only(tess.tess.find_simplex(pnt)) + 1  
+function locate(pnt::AbstractPoint{2, T1}, tess::Tessellation{T2, T3}; d::Real=POINT_LOCATION_PERTUBATION) where {T1, T2<:PyObject, T3} 
+    n = _locate(pnt, tess) 
+    n == 0 || return n
+    count = 0
+    _pnt = copy(pnt)
+    while count ≤ MAX_LOCATION_COUNT
+        _pnt = moveinside(_pnt, tess, d = d)
+        n = _locate(_pnt, tess) 
+        n == 0 || return n 
+        count += 1
+    end
+    error("Exceeded maximum location iteration ", MAX_LOCATION_COUNT, " for the point ", pnt)
+end 
+
+# Moves the point by pertubationg the point in the direction of the centroid of the convex full of the interpolation domain. 
+function moveinside(pnt, tess; d=POINT_LOCATION_PERTUBATION) 
+    hull = tess.hull
+    p0 = vec(sum(hull.points[hull.vertices .+ 1, :], dims=1)) / hull.npoints  # Centroid 
+    v = p0 - pnt 
+    w = v / norm(v) # Unit vector for move direction
+    pnt + d * w 
+end 
